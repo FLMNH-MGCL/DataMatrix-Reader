@@ -26,6 +26,12 @@ The trials loop will repeat the scanning of the same folder X amount of times, i
 """
 def main():
     target_directory = input('\nEnter the directory containing the properly named specimen images:\n --> ')
+
+    # this check prevents trailing whitespace, an occurrence when dragging a folder into the terminal prompt in MacOS
+    if target_directory.endswith(' '):
+        target_directory = target_directory[:-1]
+
+    # ensures trailing / is present
     if not target_directory.endswith('/') or not target_directory.endswith('\\'):
         target_directory += '/'
     trials = int(input('\nHow many times would you like to run this test? (1-100)\n --> '))
@@ -46,10 +52,10 @@ def main():
         for image in os.listdir(target_directory):
             arg = target_directory + image
             true_id = GetID(image)
-            p = subprocess.Popen('cat ' + arg + ' | dmtxread -n --stop-after=1', shell=True,
+            p = subprocess.Popen('cat ' + arg + ' | dmtxread --stop-after=1', shell=True,
                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             scanned = str(p.stdout.readlines(-1)[0]).split(' ')[1]
-            scanned_id = str(scanned.replace('\\n\'', ''))
+            scanned_id = str(scanned.replace('\'', ''))
             
             ret = CheckMatch(true_id, scanned_id)
             if ret == 0:
@@ -72,8 +78,8 @@ if __name__ == '__main__':
     main()
 
 """
-So far, it seems that this script averages about 2.7-2.8 seconds to scan and decode the data matrix in a single image.
-This is the fastest I have accomplished, but when looking at potential workloads with the museum (potentially scanning 
-hundreds or thousands of images in one sitting) time adds up. Doing the math, I've calculated about 37.5 hours to scan
-and decode 50,000 images in one sitting. 
+So far, it seems that this script averages about 2.7-2.8 seconds (in a VM, 2.4 seconds on actual machine) to scan and 
+decode the data matrix in a single image. This is the fastest I have accomplished, but when looking at potential workloads 
+with the museum (potentially scanning hundreds or thousands of images in one sitting) time adds up. Doing the math, 
+I've calculated about 37.5 hours to scan and decode 50,000 images in one sitting. 
 """
