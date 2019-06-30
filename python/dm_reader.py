@@ -13,8 +13,9 @@ TODO:
         perhaps 1st scan is always dorsal, 2nd is always ventral, etc. This would have to be thought of / 
         implemented during the actual phototaking sessions
     -   Use of dictionary (ID mapped to occurance count) is probably best
--   Implement recursive option for user
--   Implement GUI option for user
+- Look into implementing some way of reading the genus and species from the picture and sort it accordingly
+√   Implement recursive option for user
+√   Implement GUI option for user
 """
 
 old_new_paths = []
