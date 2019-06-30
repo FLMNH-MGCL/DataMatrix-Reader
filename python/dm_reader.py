@@ -1,10 +1,5 @@
 import os
-import sys
 import subprocess
-from tkinter import *
-from tkinter import StringVar
-from tkinter import filedialog
-import tkinter.messagebox
 
 """
 TODO:
@@ -14,129 +9,7 @@ TODO:
         implemented during the actual phototaking sessions
     -   Use of dictionary (ID mapped to occurance count) is probably best
 -   Implement recursive option for user
--   Implement GUI option for user
 """
-
-old_new_paths = []
-
-##############################
-# ******** GUI CODE ******** #
-class GUI:
-    window = None
-    target_dir = None
-    recursively = False
-
-    def __init__(self, window):
-        self.window = self.InitWindow(window)
-
-    """
-    initialization of tkinter window
-    """
-    def InitWindow(self, window):
-        # ***** GENERAL WINDOW ***** #
-        window.geometry("500x300")
-        window.title('FLMNH Data Matrix Tool')
-        #window.config(background='seashell3')
-        #window.config(background='dimgray')
-
-        # ***** STATUS BAR ***** #
-        status_message = StringVar()
-        status = Label(window, textvariable=status_message, bd=1, relief=SUNKEN, anchor=W)
-        status_message.set("Waiting...")
-        status.pack(side=BOTTOM, fill=X)
-        
-        # ***** TOP MENU ***** #
-        menu = Menu(window)
-        window.config(menu=menu)
-        subMenu = Menu(menu)
-        menu.add_cascade(label="Help", menu=subMenu)
-        subMenu.add_command(label="Usage", command=self.HelpPromt)
-
-        # ***** BUTTONS ***** #
-        button = Button(window, text="Select Folder", command=self.SelectFolder)
-        button.pack()
-
-        toggle = IntVar()
-        recursion_checkbox = Checkbutton(window, text='Recursive', variable=toggle, command= lambda: self.ToggleRecursive(toggle.get()))
-        recursion_checkbox.pack()
-
-        run_button = Button(window, text="Run", command= lambda: self.Run(status_message))
-        run_button.pack()
-
-        undo_button = Button(window, text="Undo Changes", command= lambda: self.Undo(status_message))
-        undo_button.pack()
-
-        quit_button = Button(window, text='Quit', command=window.destroy)
-        quit_button.pack()
-
-        return window
-
-
-    def mainloop(self):
-        self.window.mainloop()
-
-
-    def Run(self, status_message):
-        if self.target_dir == None:
-            tkinter.messagebox.showerror(title='User Error', message='You must select a path first.')
-            return
-
-        # check trailing slash
-        if not self.target_dir.endswith('/') or not self.target_dir.endswith('\\'):
-            self.target_dir += '/'
-
-        # no errors up to this point, update status to Running
-        status_message.set('Running...')
-
-        # check method
-        if not self.recursively:
-            DMRead(self.target_dir)
-        elif self.recursively:
-            RecursiveDMRead(self.target_dir)
-
-        # finished successfully
-        status_message.set('Finished...')
-
-
-    def Undo(self, status_message):
-        # call non-class Undo function
-        message = Undo()
-
-        # update status bar / pop up message for error
-        if message == 'There is nothing to undo.':
-            tkinter.messagebox.showerror(title='User Error', message=message)
-        else:
-            status_message.set(message)
-
-
-    def ToggleRecursive(self, value):
-        if value == 0:
-            self.recursively = False
-        elif value == 1: 
-            self.recursively = True
-
-
-    def SelectFolder(self):
-        self.target_dir = filedialog.askdirectory()
-
-
-    def HelpPromt(self):
-        prompt = str(
-            "This program will help you to automate the renaming of specimen images by automatically finding and " \
-            "decoding data matrices in the images. Simply select the target folder, select whether or not to run " \
-            "the algorithm recursively and then hit run.\n\nTo run the algorithm recursively means that in addition " \
-            "to the target directory (the folder you selected), every subdirectory (every folder within that folder) " \
-            "will also undergo the scanning and renaming process. For example, if you select a target folder path of " \
-            "/home/user/target/ and that filder contains a folder called random, running recursively will change files " \
-            "in both target and random (and any additional subfolders in random).\n\nAll changes are temporarily recorded " \
-            "in the program, so if you want to undo the script did just hit the undo button BEFORE you close the window!"
-        )
-        tkinter.messagebox.showinfo('Usage Help', prompt)
-
-
-#############################
-# ******* MAIN CODE ******* #
-
 def GetDirs(path):
     subdirectories = []
     for folder in os.listdir(path):
@@ -152,105 +25,43 @@ def GetImages(path):
             images.append(image)
     return images
 
+def Rename(new_name, path):
+    """
+    
+    """
 
-def RecursiveDMRead(path):
+
+def RecursiveRename(path):
     for dir in GetDirs(path):
-        RecursiveDMRead(path + dir + '/')
-    DMRead(path)
+        RecursiveRename(path + dir + '/')
+    # Rename(path)
 
 
-"""
-takes path to image, scans matrix, returns new name
-"""
-def DMRead(path):
-    print("\nWorking in... {}\n".format(path))
-
-    for image in GetImages(path):
-        # scanning
-        ext = '.' + image.split('.')[1]
-        arg = path + image
-        p = subprocess.Popen('cat ' + arg + ' | dmtxread --stop-after=1', shell=True,
-            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        new_name = str(p.stdout.readlines(-1)[0]).replace("b\'", '').replace(' ', '_').replace('\'', '')
-
-        # renaming
-        # os.rename(path + image, path + (new_name + ext))
-        print ('Renaming {} as {}\n'.format(path + image, path + new_name + ext))
-        old_new_paths.append(tuple((path + image, path + new_name + ext)))
-
-
-def Wait():
-    wait = True
-    print("Program completed... Please look over changes.")
-
-    while wait == True:
-        undo = input("Do you wish to undo?\n [1]yes\n [2]no\n --> ")
-        if undo == '1' or undo == 'y' or undo =='yes':
-            print(Undo())
-            wait = False
-        elif undo == '2' or undo == 'n' or undo == 'no':
-            wait = False
-        else:
-            print('Input error. Invalid option.')
-            continue
-
-def Undo():
-    print('\nUndoing changes...')
-    for old_path,new_path in old_new_paths:
-        #os.rename(new_path, old_path)
-        print ('Renaming {} back to {}\n'.format(new_path, old_path))
-    return 'Success... Restored original state.'
+def DMRead():
+    """
+    """
 
 
 def main():
-    interface = input("\nWould you prefer to use a: \n [1]command-line interface \n [2]graphical interface \n--> ")
-    if interface == '1':
-        # museum preformatted file names => MGCL_7digitnum
-        path = input('\nPlease enter the path to the folder of images: \n --> ')
+    # museum preformatted file names => MGCL_7digitnum
+    path = input('\nPlease enter the path to the folder of images: \n --> ')
+    if not path.endswith('/') or not path.endswith('\\'):
+        path += '/'
+    
+    for image in os.listdir(path):
+        arg = path + image
+        p = subprocess.Popen('cat ' + arg + ' | dmtxread -n --stop-after=1', shell=True,
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        scanned = str(p.stdout.readlines(-1)[0]).replace("b\'", '').replace(' ', '_').replace('\\n\'', '')
+        print (scanned)
+        
+        # rename file
+        """
+        new_name = scanned + '_' + view_of_spec + ext
+        os.rename(path + )
+        """
 
-        # this check removes trailing whitespace, an occurrence when dragging a folder into the terminal prompt in MacOS
-        if path.endswith(' '):
-            path = path[:-1]
 
-        # ensures trailing '/' is present
-        if not path.endswith('/') or not path.endswith('\\'):
-            path += '/'
-
-        method = input("\nChoose 1 of the following: \n [1]Standard (All files " \
-            "in this directory level only) \n [2]Recursive (All files in this " \
-            "directory level AND every level below) \n--> ")
-
-        if method == '1':
-            DMRead(path)
-            Wait()
-        elif method == '2':
-            RecursiveDMRead(path)
-            Wait()
-        else:
-            print("Input error.")
-            sys.exit(1)
-
-    elif interface == '2':
-        window = Tk()
-        my_gui = GUI(window)
-        my_gui.mainloop()
-
-    else:
-        print("Input error.")
-        sys.exit(1)
-
-    print ('Program completed...\n')
 
 if __name__ == '__main__':
     main()
-
-
-"""
-Notes / Bug report:
--   MacOS has a bug with tkinter revolving around a class (related to the folder finder dialog box)
-    being defined twice. This is not a problem with tkinter, it is a problem with Apple. Regardless, 
-    it is just a warning not an error. Since the definitions are identical it does not actually matter 
-    which one is eventually chosen to be used by the OS.
--   There is a bug with tkinter and MacOS Mojave dark theme. The text on tkinter buttons / widgets is 
-    not visible if dark mode is enabled. No such errors exist when running on Linux platforms, however.
-"""
