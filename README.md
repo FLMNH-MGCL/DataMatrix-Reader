@@ -17,7 +17,10 @@ Development has primarily taken place on Linux systems, however it is intended f
 ### Installation and Usage
 **Python:** For now, the python script is only compatible with Linux and MacOS systems. Installation on Linux will depend on your distribution, however running the script is the same between Linux and MacOS. Installation for MacOS: you'll need [Python 3](https://www.python.org/downloads/), Command Line Tools for Xcode, and you can use [Homebrew](https://docs.brew.sh/Installation) to install the necessary dmtx dependencies:
 ```
-brew install dmtx-utils
+$ brew install dmtx-utils
+$ git clone <git_url>
+$ cd DataMatrix-Reader/python
+$ python dm_reader.py
 ```
 
 ### References
