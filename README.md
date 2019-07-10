@@ -8,7 +8,7 @@ Development has primarily taken place on Linux systems, however it is intended f
 
 **C++:** No testing yet. (I plan on studying the dmtx-utils command line tools to create my own reader programs)
 
-**Java:** No testing yet.
+**Java:** Successfully implemented zxing core library into base Java project. Faced with same limitations in QT/QML, but will attempt to use zxing detectors to scan entire image for DM.
 
 **Ruby:** No testing yet.
 
