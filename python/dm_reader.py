@@ -19,6 +19,7 @@ TODO:
 """
 
 old_new_paths = []
+occurrences = dict()
 
 ##############################
 # ******** GUI CODE ******** #
@@ -172,7 +173,22 @@ def DMRead(path):
         arg = path + image
         p = subprocess.Popen('cat ' + arg + ' | dmtxread --stop-after=1', shell=True,
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+        # Replace garbage characters read in
         new_name = str(p.stdout.readlines(-1)[0]).replace("b\'", '').replace(' ', '_').replace('\'', '')
+        
+        # get and check specimen id
+        scanned_id = int(new_name.split('_')[1])
+        occurrences[scanned_id] += 1
+
+        if occurrences[scanned_id] == 1:
+            # Dorsal
+            new_name += '_D'
+        elif occurrences[scanned_id] == 2:
+            # Ventral
+            new_name += '_V'
+        else:
+            new_name += '_MANUAL'
 
         # renaming
         # os.rename(path + image, path + (new_name + ext))
