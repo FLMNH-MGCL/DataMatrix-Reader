@@ -20,6 +20,13 @@ def CheckMatch(id, scanned_id):
         print('FAILURE')
         return 1
 
+def GetImages(path):
+    images = []
+    for image in os.listdir(path):
+        if os.path.isfile(path + image):
+            images.append(image)
+    return images
+
 """
 This script will not explore past the parent directory (ie there is no recursion).
 The trials loop will repeat the scanning of the same folder X amount of times, instead.
@@ -49,7 +56,7 @@ def main():
         passed = 0
 
         start = timer()
-        for image in os.listdir(target_directory):
+        for image in GetImages(target_directory):
             arg = target_directory + image
             true_id = GetID(image)
             p = subprocess.Popen('cat ' + arg + ' | dmtxread --stop-after=1', shell=True,
