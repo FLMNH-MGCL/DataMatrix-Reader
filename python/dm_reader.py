@@ -179,7 +179,11 @@ def DMRead(path):
         
         # get and check specimen id
         scanned_id = int(new_name.split('_')[1])
-        occurrences[scanned_id] += 1
+        
+        if not occurrences or not scanned_id in occurrences:
+            occurrences[scanned_id] = 1
+        elif scanned_id in occurrences:
+            occurrences[scanned_id] += 1
 
         if occurrences[scanned_id] == 1:
             # Dorsal
