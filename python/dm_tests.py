@@ -20,8 +20,7 @@ def CheckMatch(id, scanned_id):
         print('FAILURE')
         return 1
 
-
-def GetFiles(path):
+def GetImages(path):
     images = []
     for image in os.listdir(path):
         if os.path.isfile(path + image):
@@ -57,7 +56,7 @@ def StandardTest():
         passed = 0
 
         start = timer()
-        for image in GetFiles(target_directory):
+        for image in GetImages(target_directory):
             arg = target_directory + image
             true_id = GetID(image)
             p = subprocess.Popen('cat ' + arg + ' | dmtxread --stop-after=1', shell=True,
@@ -118,7 +117,7 @@ def JPGvsPNG():
         print('\nSTARTING TRIAL {}\n'.format(i + 1))
 
         jpg_start = timer()
-        for jpg in GetFiles(JPG_directory):
+        for jpg in GetImages(JPG_directory):
             arg = JPG_directory + jpg
             true_id = GetID(jpg)
             p = subprocess.Popen('cat ' + arg + ' | dmtxread --stop-after=1', shell=True,
@@ -135,7 +134,7 @@ def JPGvsPNG():
         jpg_end = timer()
 
         png_start = timer()
-        for png in GetFiles(PNG_directory):
+        for png in GetImages(PNG_directory):
             arg = PNG_directory + jpg
             true_id = GetID(jpg)
             p = subprocess.Popen('cat ' + arg + ' | dmtxread --stop-after=1', shell=True,
