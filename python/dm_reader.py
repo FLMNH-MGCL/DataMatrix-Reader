@@ -175,8 +175,11 @@ def DMRead(path):
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
         # Replace garbage characters read in
-        new_name = str(p.stdout.readlines(-1)[0]).replace("b\'", '').replace(' ', '_').replace('\'', '')
-        
+        #new_name = str(p.stdout.readlines(-1)[0]).replace("b\'", '').replace(' ', '_').replace('\'', '')
+        new_name = str(p.stdout.readlines(-1)[0])
+        print(new_name)
+        new_name = new_name.replace("b\'", '').replace(' ', '_').replace('\'', '')
+
         # get and check specimen id
         scanned_id = int(new_name.split('_')[1])
         
