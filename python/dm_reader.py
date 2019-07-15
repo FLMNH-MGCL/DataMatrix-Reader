@@ -20,6 +20,7 @@ TODO:
 
 old_new_paths = []
 occurrences = dict()
+ignoreMGCL = True
 
 ##############################
 # ******** GUI CODE ******** #
@@ -151,7 +152,12 @@ def GetImages(path):
     images = []
     for image in os.listdir(path):
         if os.path.isfile(path + image):
-            images.append(image)
+            # if specified, do not rename images that already contain MGCL
+            if "MGCL" not in image and ignoreMGCL == False:
+                images.append(image)
+            # default
+            elif ignoreMGCL == True:
+                images.append(image)
     return images
 
 
@@ -191,6 +197,9 @@ def DMRead(path):
         elif occurrences[scanned_id] == 2:
             # Ventral
             new_name += '_V'
+        elif "lateral" in new_name.lower() or "lat" in new_name.lower():
+            new_name.replace("lat", "")
+            new_name.replace("eral", "")
         else:
             new_name += '_MANUAL'
 
