@@ -31,7 +31,7 @@ def GetImages(path):
 This script will not explore past the parent directory (ie there is no recursion).
 The trials loop will repeat the scanning of the same folder X amount of times, instead.
 """
-def main():
+def StandardTest():
     target_directory = input('\nEnter the directory containing the properly named specimen images:\n --> ')
 
     # this check prevents trailing whitespace, an occurrence when dragging a folder into the terminal prompt in MacOS
@@ -81,6 +81,93 @@ def main():
     total_time = global_end - global_start
     print('ALL TRIALS COMPLETED.\nTOTAL ACCURACY: {} / {} CORRECTLY SCANNED\nTOTAL TIME: {}\nSECONDS PER SCAN: {}'.format(total_passed, total_scans, total_time, total_time / total_scans))
 
+"""
+This will test the differences in speed between decoding data matrices in JPG images versus PNG images
+"""
+def JPGvsPNG():
+    JPG_directory = input('\nEnter the directory containing the properly named specimen images (JPG only):\n --> ')
+    PNG_directory = input('\nEnter the directory containing the properly named specimen images (PNG only):\n --> ')
+
+    # this check prevents trailing whitespace, an occurrence when dragging a folder into the terminal prompt in MacOS
+    if JPG_directory.endswith(' '):
+        JPG_directory = JPG_directory[:-1]
+    if PNG_directory.endswith(' '):
+        PNG_directory = PNG_directory[:-1]
+
+    # ensures trailing / is present
+    if not JPG_directory.endswith('/') or not JPG_directory.endswith('\\'):
+        JPG_directory += '/'
+    if not PNG_directory.endswith('/') or not PNG_directory.endswith('\\'):
+        PNG_directory += '/'
+
+    trials = int(input('\nHow many times would you like to run this test? (1-100)\n --> '))
+    
+    total_passed_JPG = 0
+    total_failed_JPG = 0
+    total_time_JPG = 0
+    total_scans_JPG = 0
+
+    total_passed_PNG = 0
+    total_failed_PNG = 0
+    total_time_PNG = 0
+    total_scans_PNG = 0
+
+    global_start = timer()
+    for i in range(0, trials):
+        print('\nSTARTING TRIAL {}\n'.format(i + 1))
+
+        jpg_start = timer()
+        for jpg in GetImages(JPG_directory):
+            arg = JPG_directory + jpg
+            true_id = GetID(jpg)
+            p = subprocess.Popen('cat ' + arg + ' | dmtxread --stop-after=1', shell=True,
+                stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            scanned = str(p.stdout.readlines(-1)[0]).split(' ')[1]
+            scanned_id = str(scanned.replace('\'', ''))
+            
+            ret = CheckMatch(true_id, scanned_id)
+            if ret == 0:
+                total_passed_JPG += 1
+            else:
+                total_failed_JPG += 1
+            total_scans_JPG += 1
+        jpg_end = timer()
+
+        png_start = timer()
+        for png in GetImages(PNG_directory):
+            arg = PNG_directory + jpg
+            true_id = GetID(jpg)
+            p = subprocess.Popen('cat ' + arg + ' | dmtxread --stop-after=1', shell=True,
+                stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            scanned = str(p.stdout.readlines(-1)[0]).split(' ')[1]
+            scanned_id = str(scanned.replace('\'', ''))
+            
+            ret = CheckMatch(true_id, scanned_id)
+            if ret == 0:
+                total_passed_PNG += 1
+            else:
+                total_failed_PNG += 1
+            total_scans_PNG += 1
+        png_end = timer()
+
+        print ('\nTRAIL {} ENDED.\n{} / {} JPGs SCANNED CORRECTLY.\n {} / {} PNGs SCANNED CORRECTLY.\n{} JPGs SCNANED PER SECOND.\n{} PNGs SCNANED PER SECOND.\n'.format(i, total_passed_JPG, total_passed_JPG + total_failed_JPG, total_passed_PNG, 
+            total_passed_PNG + total_failed_PNG, (jpg_end - jpg_start) / (total_passed_JPG + total_failed_JPG), 
+            (png_end - png_start) / (total_passed_PNG + total_failed_PNG)))
+
+    global_end = timer()
+
+    print()
+
+
+def main():
+    test = input("Enter which test to run: \n [1] Standard Test (tests all images in directory) \n [2] JPG vs PNG (tests speed differences between JPG and PNG) \n --> ")
+    if test == '1' or 'Standard Test':
+        StandardTest()
+    else:
+        JPGvsPNG()
+
+
+# Driver
 if __name__ == '__main__':
     main()
 
