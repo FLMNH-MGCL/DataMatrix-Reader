@@ -98,9 +98,9 @@ class GUI:
 
         # check method
         if not self.recursively:
-            DMRead(self.target_dir)
+            ProcessData(self.target_dir)
         elif self.recursively:
-            RecursiveDMRead(self.target_dir)
+            RecursiveProcessData(self.target_dir)
 
         # finished successfully
         status_message.set('Finished...')
@@ -166,10 +166,10 @@ def GetImages(path):
     return images
     
 
-def RecursiveDMRead(path):
+def RecursiveProcessData(path):
     for dir in GetDirs(path):
-        RecursiveDMRead(path + dir + '/')
-    DMRead(path)
+        RecursiveProcessData(path + dir + '/')
+    ProcessData(path)
 
 
 """
@@ -178,14 +178,14 @@ takes path to image, scans matrix, returns new name
 def BarcodeRead(path):
     print("DMTX not found, looking for legacy barcode:")
     decoder = decode(Image.open(path))
-    name = str(decoder[0])
+    name = str(decoder[0].data)
     return name
 
 def DMRead(path):
     # stop if nothing is found after 15 seconds (15000 milliseconds)
     p = subprocess.Popen('cat ' + path + ' | dmtxread --stop-after=1 -m15000', shell=True,
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    return str(p.stdout.readlines(-1)[0])
+    return str(p.stdout.readline())
 
 def ProcessData(path):
     print("\nWorking in... {}\n".format(path))
@@ -196,7 +196,7 @@ def ProcessData(path):
         arg = path + image
 
         new_name = DMRead(arg)
-        if "MGLC" not in new_name:
+        if "MGCL" not in new_name:
             new_name = BarcodeRead(arg)
     
         # Replace garbage characters read in
@@ -278,10 +278,10 @@ def main():
             "directory level AND every level below) \n--> ")
 
         if method == '1':
-            DMRead(path)
+            ProcessData(path)
             Wait()
         elif method == '2':
-            RecursiveDMRead(path)
+            RecursiveProcessData(path)
             Wait()
         else:
             print("Input error.")
