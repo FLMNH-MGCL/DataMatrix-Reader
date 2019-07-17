@@ -178,7 +178,10 @@ takes path to image, scans matrix, returns new name
 def BarcodeRead(path):
     print("DMTX not found, looking for legacy barcode:")
     decoder = decode(Image.open(path))
-    name = str(decoder[0].data)
+    try:
+        name = str(decoder[0].data)
+    except:
+        name = "nothing"
     return name
 
 def DMRead(path):
