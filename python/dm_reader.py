@@ -5,6 +5,8 @@ from tkinter import *
 from tkinter import StringVar
 from tkinter import filedialog
 import tkinter.messagebox
+from pyzbar.pyzbar import decode
+from PIL import Image
 
 """
 TODO:
@@ -62,6 +64,9 @@ class GUI:
         toggle = IntVar()
         recursion_checkbox = Checkbutton(window, text='Recursive', variable=toggle, command= lambda: self.ToggleRecursive(toggle.get()))
         recursion_checkbox.pack()
+
+        # review_data_checkbox = Checkbutton(window, text='Review MGCL (Legacy Cleanup)', variable=toggle, command= lambda: self.ToggleRevision(toggle.get()))
+        # review_data_checkbox.pack()
 
         run_button = Button(window, text="Run", command= lambda: self.Run(status_message))
         run_button.pack()
@@ -170,26 +175,35 @@ def RecursiveDMRead(path):
 """
 takes path to image, scans matrix, returns new name
 """
+def BarcodeRead(path):
+    print("DMTX not found, looking for legacy barcode:")
+    decoder = decode(Image.open(path))
+    name = str(decoder[0])
+    return name
+
 def DMRead(path):
+    # stop if nothing is found after 15 seconds (15000 milliseconds)
+    p = subprocess.Popen('cat ' + path + ' | dmtxread --stop-after=1 -m15000', shell=True,
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    return str(p.stdout.readlines(-1)[0])
+
+def ProcessData(path):
     print("\nWorking in... {}\n".format(path))
 
     for image in GetImages(path):
         # scanning
         ext = '.' + image.split('.')[1]
         arg = path + image
-        p = subprocess.Popen('cat ' + arg + ' | dmtxread --stop-after=1', shell=True,
-            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
+        new_name = DMRead(arg)
+        if "MGLC" not in new_name:
+            new_name = BarcodeRead(arg)
+    
         # Replace garbage characters read in
-        #new_name = str(p.stdout.readlines(-1)[0]).replace("b\'", '').replace(' ', '_').replace('\'', '')
-        scanned = str(p.stdout.readline())
-        if scanned == "b\'\'" or len(scanned) <= 0:
-            scanned = BarcodeRead(arg)
-            if scanned == "":
-                print("No data matrix or 1D barcode found in image. Continuing.")
-                continue
-        else:
-            scanned = scanned.replace("b\'", '').replace(' ', '_').replace('\'', '')
+        new_name = str(new_name).replace("b\'", '').replace(' ', '_').replace('\'', '')
+
+        print(new_name)
+        new_name = new_name.replace("b\'", '').replace(' ', '_').replace('\'', '')
 
         # get and check specimen id
         scanned_id = int(new_name.split('_')[1])
