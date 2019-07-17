@@ -20,7 +20,7 @@ TODO:
 
 old_new_paths = []
 occurrences = dict()
-ignoreMGCL = True
+checkMGCL = False
 
 ##############################
 # ******** GUI CODE ******** #
@@ -153,10 +153,10 @@ def GetImages(path):
     for image in os.listdir(path):
         if os.path.isfile(path + image):
             # if specified, do not rename images that already contain MGCL
-            if "MGCL" not in image and ignoreMGCL == False:
+            if "MGCL" not in image and checkMGCL == True:
                 images.append(image)
             # default
-            elif ignoreMGCL == True:
+            elif checkMGCL == False:
                 images.append(image)
     return images
 
@@ -189,22 +189,29 @@ def DMRead(path):
         # get and check specimen id
         scanned_id = int(new_name.split('_')[1])
         
-        if not occurrences or not scanned_id in occurrences:
-            occurrences[scanned_id] = 1
-        elif scanned_id in occurrences:
-            occurrences[scanned_id] += 1
-
-        if occurrences[scanned_id] == 1:
-            # Dorsal
-            new_name += '_D'
-        elif occurrences[scanned_id] == 2:
-            # Ventral
-            new_name += '_V'
-        elif "lateral" in new_name.lower() or "lat" in new_name.lower():
+        if "lateral" in new_name.lower() or "lat" in new_name.lower():
+            # Lateral
             new_name.replace("lat", "")
             new_name.replace("eral", "")
+            new_name += '_L'
+        
         else:
-            new_name += '_MANUAL'
+            if not occurrences or not scanned_id in occurrences:
+                occurrences[scanned_id] = 1
+            elif scanned_id in occurrences:
+                occurrences[scanned_id] += 1
+
+            if occurrences[scanned_id] == 1:
+                # Dorsal
+                new_name += '_D'
+            elif occurrences[scanned_id] == 2:
+                # Ventral
+                new_name += '_V'
+            else:
+                new_name += '_MANUAL'
+
+
+      
 
         # renaming
         # os.rename(path + image, path + (new_name + ext))
