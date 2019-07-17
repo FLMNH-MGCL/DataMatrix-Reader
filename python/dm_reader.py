@@ -159,7 +159,7 @@ def GetImages(path):
             elif checkMGCL == False:
                 images.append(image)
     return images
-
+    
 
 def RecursiveDMRead(path):
     for dir in GetDirs(path):
@@ -182,9 +182,14 @@ def DMRead(path):
 
         # Replace garbage characters read in
         #new_name = str(p.stdout.readlines(-1)[0]).replace("b\'", '').replace(' ', '_').replace('\'', '')
-        new_name = str(p.stdout.readlines(-1)[0])
-        print(new_name)
-        new_name = new_name.replace("b\'", '').replace(' ', '_').replace('\'', '')
+        scanned = str(p.stdout.readline())
+        if scanned == "b\'\'" or len(scanned) <= 0:
+            scanned = BarcodeRead(arg)
+            if scanned == "":
+                print("No data matrix or 1D barcode found in image. Continuing.")
+                continue
+        else:
+            scanned = scanned.replace("b\'", '').replace(' ', '_').replace('\'', '')
 
         # get and check specimen id
         scanned_id = int(new_name.split('_')[1])
@@ -210,8 +215,6 @@ def DMRead(path):
             else:
                 new_name += '_MANUAL'
 
-
-      
 
         # renaming
         # os.rename(path + image, path + (new_name + ext))
