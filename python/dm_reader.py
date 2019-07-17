@@ -5,7 +5,7 @@ from tkinter import *
 from tkinter import StringVar
 from tkinter import filedialog
 import tkinter.messagebox
-
+import zbar
 """
 TODO:
 -   Implement some way of knowing the side of the specimen (eg ventral, dorsal, lateral).
@@ -62,6 +62,9 @@ class GUI:
         toggle = IntVar()
         recursion_checkbox = Checkbutton(window, text='Recursive', variable=toggle, command= lambda: self.ToggleRecursive(toggle.get()))
         recursion_checkbox.pack()
+
+        # review_data_checkbox = Checkbutton(window, text='Review MGCL (Legacy Cleanup)', variable=toggle, command= lambda: self.ToggleRevision(toggle.get()))
+        # review_data_checkbox.pack()
 
         run_button = Button(window, text="Run", command= lambda: self.Run(status_message))
         run_button.pack()
