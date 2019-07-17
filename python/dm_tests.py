@@ -5,10 +5,12 @@ Scanned in IDs will be compared with the hand recorded IDs to ensure accurate sc
 import os
 import subprocess
 from timeit import default_timer as timer
+from pyzbar.pyzbar import decode
+from PIL import Image
 
 def GetID(filename):
     id = filename.split('_')[1].split('.')[0]
-    return id
+    return int(id)
 
 
 def CheckMatch(id, scanned_id):
@@ -26,6 +28,40 @@ def GetImages(path):
         if os.path.isfile(path + image):
             images.append(image)
     return images
+
+"""
+attempts to scan data from data matrix, returns result. 
+result of image without data matrix will be empty string
+"""
+def DM_Read(path):
+    p = subprocess.Popen('cat ' + path + ' | dmtxread --stop-after=1 -m15000', shell=True,
+        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    scanned = str(p.stdout.readline())
+    if scanned == "b\'\'":
+        print("NOT FOUND IN DM_READ")
+        scanned = ""
+    elif len(scanned) > 0:
+        #scanned = scanned.split(' ')[1]
+        scanned = scanned.replace("b\'", '').replace(' ', '_').replace('\'', '')
+    else:
+        scanned = ""
+
+    return scanned
+
+"""
+called after failed DM_Read. Attempts 1-d barcode read with pyzbar
+"""
+def BarcodeRead(path):
+    decoded = decode(Image.open(path))
+    data = str(decoded[0].data)
+
+    if len(data) > 0:
+        data = data.replace("b\'", '').replace(' ', '_').replace('\'', '')
+    else:
+        data = ""
+
+    return data
 
 """
 This script will not explore past the parent directory (ie there is no recursion).
@@ -57,12 +93,20 @@ def StandardTest():
 
         start = timer()
         for image in GetImages(target_directory):
-            arg = target_directory + image
+            path = target_directory + image
             true_id = GetID(image)
-            p = subprocess.Popen('cat ' + arg + ' | dmtxread --stop-after=1', shell=True,
-                stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            scanned = str(p.stdout.readlines(-1)[0]).split(' ')[1]
-            scanned_id = str(scanned.replace('\'', ''))
+            scanned = DM_Read(path)
+
+            # try again, looking for 1d instead
+            if scanned == "":
+                print("Could not find data matrix, search for barcode...")
+                scanned = BarcodeRead(path)
+
+            if scanned == "":
+                print("No Data Matrix or 1D Barcode found in image.")
+                continue
+
+            scanned_id = int(str(scanned.strip().replace('\'', '')).split('_')[1])
             
             ret = CheckMatch(true_id, scanned_id)
             if ret == 0:
@@ -72,12 +116,15 @@ def StandardTest():
             total_scans += 1
         end = timer()
 
-        print ('\nTRAIL {} ENDED.\n{} / {} SCANNED CORRECTLY.\n{} SECONDS TOTAL, AVG {} IMAGES SCNANED PER SECOND.\n'.format(i + 1, passed, (passed + failed), 
-                (end - start), (end - start) / (passed + failed)))
-        total_passed += passed
-        total_failed += failed
+        
+        #print ('\nTRAIL {} ENDED.\n{} / {} SCANNED CORRECTLY.\n{} SECONDS TOTAL, AVG {} IMAGES SCNANED PER SECOND.\n'.format(i + 1, passed, (passed + failed), 
+        #        (end - start), (end - start) / (passed + failed)))
+        #total_passed += passed
+        #total_failed += failed
+        
 
     global_end = timer()
+    return
     total_time = global_end - global_start
     print('ALL TRIALS COMPLETED.\nTOTAL ACCURACY: {} / {} CORRECTLY SCANNED\nTOTAL TIME: {}\nSECONDS PER SCAN: {}'.format(total_passed, total_scans, total_time, total_time / total_scans))
 
