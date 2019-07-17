@@ -164,7 +164,7 @@ def GetImages(path):
             elif checkMGCL == False:
                 images.append(image)
     return images
-
+    
 
 def RecursiveDMRead(path):
     for dir in GetDirs(path):
@@ -229,8 +229,6 @@ def ProcessData(path):
             else:
                 new_name += '_MANUAL'
 
-
-      
 
         # renaming
         # os.rename(path + image, path + (new_name + ext))
