@@ -164,10 +164,10 @@ def GetImages(path):
     return images
     
 
-def RecursiveProcessData(path, usrTime):
+def RecursiveProcessData(path):
     for dir in GetDirs(path):
         RecursiveProcessData(path + dir + '/')
-    ProcessData(path, usrTime)
+    ProcessData(path)
 
 
 """
@@ -182,14 +182,14 @@ def BarcodeRead(path):
         name = "nothing"
     return name
 
-def DMRead(path, usrTime):
+def DMRead(path):
     # stop if nothing is found after 15 seconds (15000 milliseconds)
     print('cat ' + path + ' | dmtxread --stop-after=1 -m' + SCAN_TIME)
     p = subprocess.Popen('cat ' + path + ' | dmtxread --stop-after=1 -m' + SCAN_TIME, shell=True,
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     return str(p.stdout.readline())
 
-def ProcessData(path, usrTime):
+def ProcessData(path):
     print("\nWorking in... {}\n".format(path))
 
     for image in GetImages(path):
@@ -199,7 +199,7 @@ def ProcessData(path, usrTime):
 
         print(image)
 
-        new_name = DMRead(arg, usrTime)
+        new_name = DMRead(arg)
         if "MGCL" not in new_name:
             new_name = BarcodeRead(arg)
     
@@ -272,6 +272,7 @@ def main():
         new_time = input('\nPlease enter the max amount of scan time to search for a matrix per image (in seconds): \n --> ')
         while not new_time.isdigit():
             new_time = input('Input error. Please enter an integer. \n --> ')
+        global SCAN_TIME 
         SCAN_TIME = new_time + '000'
 
         # this check removes trailing whitespace, an occurrence when dragging a folder into the terminal prompt in MacOS
@@ -287,10 +288,10 @@ def main():
             "directory level AND every level below) \n--> ")
 
         if method == '1':
-            ProcessData(path, usrTime)
+            ProcessData(path)
             Wait()
         elif method == '2':
-            RecursiveProcessData(path, usrTime)
+            RecursiveProcessData(path)
             Wait()
         else:
             print("Input error.")
