@@ -272,6 +272,7 @@ def main():
         new_time = input('\nPlease enter the max amount of scan time to search for a matrix per image (in seconds): \n --> ')
         while not new_time.isdigit():
             new_time = input('Input error. Please enter an integer. \n --> ')
+        global SCAN_TIME 
         SCAN_TIME = new_time + '000'
 
         # this check removes trailing whitespace, an occurrence when dragging a folder into the terminal prompt in MacOS
