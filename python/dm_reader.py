@@ -152,6 +152,7 @@ def GetDirs(path):
 
 
 def GetImages(path):
+    global checkMGCL
     images = []
     for image in os.listdir(path):
         if os.path.isfile(path + image):
@@ -191,6 +192,9 @@ def DMRead(path):
 
 def ProcessData(path):
     print("\nWorking in... {}\n".format(path))
+    
+    global old_new_paths
+    global occurrences
 
     for image in GetImages(path):
         # scanning
@@ -255,6 +259,7 @@ def Wait():
             continue
 
 def Undo():
+    global old_new_paths
     print('\nUndoing changes...')
     for old_path,new_path in old_new_paths:
         #os.rename(new_path, old_path)
@@ -263,6 +268,8 @@ def Undo():
 
 
 def main():
+    global SCAN_TIME 
+    
     #interface = input("\nWould you prefer to use a: \n [1]command-line interface \n [2]graphical interface \n--> ")
     interface = '1'
     if interface == '1':
@@ -272,7 +279,6 @@ def main():
         new_time = input('\nPlease enter the max amount of scan time to search for a matrix per image (in seconds): \n --> ')
         while not new_time.isdigit():
             new_time = input('Input error. Please enter an integer. \n --> ')
-        global SCAN_TIME 
         SCAN_TIME = new_time + '000'
 
         # this check removes trailing whitespace, an occurrence when dragging a folder into the terminal prompt in MacOS
