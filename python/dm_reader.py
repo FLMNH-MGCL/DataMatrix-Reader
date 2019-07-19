@@ -284,6 +284,7 @@ def main():
     interface = '1'
     if interface == '1':
         # museum preformatted file names => MGCL_7digitnum
+        AskUsage()
         path = input('\nPlease enter the path to the folder of images: \n --> ')
 
         new_time = input('\nPlease enter the max amount of scan time to search for a matrix per image (in seconds): \n --> ')
