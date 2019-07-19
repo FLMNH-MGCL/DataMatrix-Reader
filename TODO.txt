@@ -1,0 +1,2 @@
+1). check if listdir keeps ording of files (ie 1.txt is 1st, 2.txt second, etc)
+2). implement cutoff time difference for slower systems in dmread

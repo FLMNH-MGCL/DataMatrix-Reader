@@ -186,7 +186,7 @@ def BarcodeRead(path):
 
 def DMRead(path):
     # stop if nothing is found after 15 seconds (15000 milliseconds)
-    p = subprocess.Popen('cat ' + path + ' | dmtxread --stop-after=1 -m15000', shell=True,
+    p = subprocess.Popen('cat ' + path + ' | dmtxread --stop-after=1 -m30000', shell=True,
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     return str(p.stdout.readline())
 
@@ -198,6 +198,8 @@ def ProcessData(path):
         ext = '.' + image.split('.')[1]
         arg = path + image
 
+        print(image)
+
         new_name = DMRead(arg)
         if "MGCL" not in new_name:
             new_name = BarcodeRead(arg)
@@ -205,7 +207,6 @@ def ProcessData(path):
         # Replace garbage characters read in
         new_name = str(new_name).replace("b\'", '').replace(' ', '_').replace('\'', '')
 
-        print(new_name)
         new_name = new_name.replace("b\'", '').replace(' ', '_').replace('\'', '')
 
         # get and check specimen id
