@@ -1,10 +1,10 @@
 import os
 import sys
 import subprocess
-from tkinter import *
-from tkinter import StringVar
-from tkinter import filedialog
-import tkinter.messagebox
+#from tkinter import *
+#from tkinter import StringVar
+#from tkinter import filedialog
+#import tkinter.messagebox
 from pyzbar.pyzbar import decode
 from PIL import Image
 
@@ -23,7 +23,8 @@ TODO:
 old_new_paths = []
 occurrences = dict()
 checkMGCL = False
-
+SCAN_TIME = '30000'
+"""
 ##############################
 # ******** GUI CODE ******** #
 class GUI:
@@ -34,9 +35,6 @@ class GUI:
     def __init__(self, window):
         self.window = self.InitWindow(window)
 
-    """
-    initialization of tkinter window
-    """
     def InitWindow(self, window):
         # ***** GENERAL WINDOW ***** #
         window.geometry("500x300")
@@ -140,7 +138,7 @@ class GUI:
             "in the program, so if you want to undo the script did just hit the undo button BEFORE you close the window!"
         )
         tkinter.messagebox.showinfo('Usage Help', prompt)
-
+"""
 
 #############################
 # ******* MAIN CODE ******* #
@@ -186,7 +184,8 @@ def BarcodeRead(path):
 
 def DMRead(path, usrTime):
     # stop if nothing is found after 15 seconds (15000 milliseconds)
-    p = subprocess.Popen('cat ' + path + ' | dmtxread --stop-after=1 -m' + usrTime + '000', shell=True,
+    print('cat ' + path + ' | dmtxread --stop-after=1 -m' + SCAN_TIME)
+    p = subprocess.Popen('cat ' + path + ' | dmtxread --stop-after=1 -m' + SCAN_TIME, shell=True,
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     return str(p.stdout.readline())
 
@@ -264,15 +263,16 @@ def Undo():
 
 
 def main():
-    usrTime = input("Enter maximum scan time per image in seconds \n RECOMMENDED: \n 30 for very fast machines \n 60 or more for slower machines \n --> ")
-    while not usrTime.isdigit():
-        print('Please enter numbers only i.e. 58')
-        usrTime = input("Enter maximum scan time per image in seconds \n RECOMMENDED: \n 30 for very fast machines \n 60 or more for slower machines \n --> ")
-
-    interface = input("\nWould you prefer to use a: \n [1]command-line interface \n [2]graphical interface \n--> ")
+    #interface = input("\nWould you prefer to use a: \n [1]command-line interface \n [2]graphical interface \n--> ")
+    interface = '1'
     if interface == '1':
         # museum preformatted file names => MGCL_7digitnum
         path = input('\nPlease enter the path to the folder of images: \n --> ')
+
+        new_time = input('\nPlease enter the max amount of scan time to search for a matrix per image (in seconds): \n --> ')
+        while not new_time.isdigit():
+            new_time = input('Input error. Please enter an integer. \n --> ')
+        SCAN_TIME = new_time + '000'
 
         # this check removes trailing whitespace, an occurrence when dragging a folder into the terminal prompt in MacOS
         if path.endswith(' '):
@@ -295,12 +295,12 @@ def main():
         else:
             print("Input error.")
             sys.exit(1)
-
-    elif interface == '2':
-        window = Tk()
-        my_gui = GUI(window)
-        my_gui.mainloop()
-
+    
+    #elif interface == '2':
+    #    window = Tk()
+    #    my_gui = GUI(window)
+    #    my_gui.mainloop()
+    
     else:
         print("Input error.")
         sys.exit(1)
