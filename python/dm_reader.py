@@ -186,7 +186,7 @@ def BarcodeRead(path):
 
 def DMRead(path):
     # stop if nothing is found after 15 seconds (15000 milliseconds)
-    p = subprocess.Popen('cat ' + path + ' | dmtxread --stop-after=1 -m15000', shell=True,
+    p = subprocess.Popen('cat ' + path + ' | dmtxread --stop-after=1 -m60000', shell=True,
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     return str(p.stdout.readline())
 
