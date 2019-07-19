@@ -174,10 +174,10 @@ def GetImages(path):
     for image in os.listdir(path):
         if os.path.isfile(path + image):
             # if specified, do not rename images that already contain MGCL
-            if "MGCL" not in image and checkMGCL == True:
+            if "MGCL" not in image and checkMGCL == False:
                 images.append(image)
             # default
-            elif checkMGCL == False:
+            elif checkMGCL == True:
                 images.append(image)
     return images
     
@@ -286,6 +286,7 @@ def Undo():
 
 def main():
     global SCAN_TIME 
+    global checkMGCL
     
     #interface = input("\nWould you prefer to use a: \n [1]command-line interface \n [2]graphical interface \n--> ")
     interface = '1'
@@ -298,6 +299,17 @@ def main():
         while not new_time.isdigit():
             new_time = input('Input error. Please enter an integer. \n --> ')
         SCAN_TIME = new_time + '000'
+
+        askMGCL = 'nothing'
+        while askMGCL == 'nothing':
+            askMGCL = input('Would you like to scan images already containing (MGCL) in the filename \n [1] Yes \n [2] No \n --> ')
+            if askMGCL.lower() == "yes" or askMGCL.lower() == "y" or askMGCL == "1":
+                checkMGCL = True
+            elif askMGCL.lower() == "no" or askMGCL.lower() == "n" or askMGCL == "2":
+                checkMGCL = False
+            else:
+                askMGCL = 'nothing'
+                print('Please enter a correct value: ')
 
         # this check removes trailing whitespace, an occurrence when dragging a folder into the terminal prompt in MacOS
         if path.endswith(' '):
