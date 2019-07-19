@@ -166,10 +166,10 @@ def GetImages(path):
     return images
     
 
-def RecursiveProcessData(path):
+def RecursiveProcessData(path, usrTime):
     for dir in GetDirs(path):
         RecursiveProcessData(path + dir + '/')
-    ProcessData(path)
+    ProcessData(path, usrTime)
 
 
 """
@@ -184,13 +184,13 @@ def BarcodeRead(path):
         name = "nothing"
     return name
 
-def DMRead(path):
+def DMRead(path, usrTime):
     # stop if nothing is found after 15 seconds (15000 milliseconds)
-    p = subprocess.Popen('cat ' + path + ' | dmtxread --stop-after=1 -m30000', shell=True,
+    p = subprocess.Popen('cat ' + path + ' | dmtxread --stop-after=1 -m' + usrTime + '000', shell=True,
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     return str(p.stdout.readline())
 
-def ProcessData(path):
+def ProcessData(path, usrTime):
     print("\nWorking in... {}\n".format(path))
 
     for image in GetImages(path):
@@ -200,7 +200,7 @@ def ProcessData(path):
 
         print(image)
 
-        new_name = DMRead(arg)
+        new_name = DMRead(arg, usrTime)
         if "MGCL" not in new_name:
             new_name = BarcodeRead(arg)
     
@@ -264,6 +264,11 @@ def Undo():
 
 
 def main():
+    usrTime = input("Enter maximum scan time per image in seconds \n RECOMMENDED: \n 30 for very fast machines \n 60 or more for slower machines \n --> ")
+    while not usrTime.isdigit():
+        print('Please enter numbers only i.e. 58')
+        usrTime = input("Enter maximum scan time per image in seconds \n RECOMMENDED: \n 30 for very fast machines \n 60 or more for slower machines \n --> ")
+
     interface = input("\nWould you prefer to use a: \n [1]command-line interface \n [2]graphical interface \n--> ")
     if interface == '1':
         # museum preformatted file names => MGCL_7digitnum
@@ -282,10 +287,10 @@ def main():
             "directory level AND every level below) \n--> ")
 
         if method == '1':
-            ProcessData(path)
+            ProcessData(path, usrTime)
             Wait()
         elif method == '2':
-            RecursiveProcessData(path)
+            RecursiveProcessData(path, usrTime)
             Wait()
         else:
             print("Input error.")
