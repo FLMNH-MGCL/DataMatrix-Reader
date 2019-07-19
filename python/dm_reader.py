@@ -1,10 +1,10 @@
 import os
 import sys
 import subprocess
-from tkinter import *
-from tkinter import StringVar
-from tkinter import filedialog
-import tkinter.messagebox
+#from tkinter import *
+#from tkinter import StringVar
+#from tkinter import filedialog
+#import tkinter.messagebox
 from pyzbar.pyzbar import decode
 from PIL import Image
 
@@ -23,6 +23,7 @@ TODO:
 old_new_paths = []
 occurrences = dict()
 checkMGCL = False
+SCAN_TIME = '30000'
 """
 ##############################
 # ******** GUI CODE ******** #
@@ -183,7 +184,8 @@ def BarcodeRead(path):
 
 def DMRead(path):
     # stop if nothing is found after 15 seconds (15000 milliseconds)
-    p = subprocess.Popen('cat ' + path + ' | dmtxread --stop-after=1 -m30000', shell=True,
+    print('cat ' + path + ' | dmtxread --stop-after=1 -m' + SCAN_TIME)
+    p = subprocess.Popen('cat ' + path + ' | dmtxread --stop-after=1 -m' + SCAN_TIME, shell=True,
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     return str(p.stdout.readline())
 
@@ -266,6 +268,11 @@ def main():
     if interface == '1':
         # museum preformatted file names => MGCL_7digitnum
         path = input('\nPlease enter the path to the folder of images: \n --> ')
+
+        new_time = input('\nPlease enter the max amount of scan time to search for a matrix per image (in seconds): \n --> ')
+        while not new_time.isdigit():
+            new_time = input('Input error. Please enter an integer. \n --> ')
+        SCAN_TIME = new_time + '000'
 
         # this check removes trailing whitespace, an occurrence when dragging a folder into the terminal prompt in MacOS
         if path.endswith(' '):
