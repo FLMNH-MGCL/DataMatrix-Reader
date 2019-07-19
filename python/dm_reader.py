@@ -7,6 +7,7 @@ import subprocess
 #import tkinter.messagebox
 from pyzbar.pyzbar import decode
 from PIL import Image
+import time
 
 """
 TODO:
@@ -142,6 +143,22 @@ class GUI:
 
 #############################
 # ******* MAIN CODE ******* #
+def AskUsage():
+    prompt = str(
+            "This program will help to automate the renaming of specimen images by automatically finding and " \
+            "decoding data matrices / barcodes in the images. On start, you will be prompted with whether or not " \
+            "to view this help message. After which, the program will begin in 10 seconds. You will enter the path " \
+            "to a folder containing the families of the collected speciment. On a mac, you may simply drag the folder " \
+            "into the terminal window. You will then have the option to run the program recursively (scanning all " \
+            "images in all subfolders) or standardly (scanning only in provided folder, no additional subfolders). " \
+            "All changes to file names are temporarily saved, so please review the changes when prompted. You will " \
+            "have the chance to undo the program's renaming ONLY WHEN PROMPTED, so it is important to check the results " \
+            "before closing / terminating the project"
+        )
+    wanted = input("\nDo you want to see the usage information?\n [1]yes\n [2]no\n --> ")
+    if wanted == '1' or wanted == 'y' or wanted == 'yes':
+        print(prompt)
+        time.sleep(10)
 
 def GetDirs(path):
     subdirectories = []
