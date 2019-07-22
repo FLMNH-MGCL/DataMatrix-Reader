@@ -162,7 +162,7 @@ def AskUsage():
 
 def GetDirs(path):
     subdirectories = []
-    for folder in os.listdir(path):
+    for folder in sorted(os.listdir(path)):
         if os.path.isdir(path + folder):
             subdirectories.append(folder)
     return subdirectories
@@ -171,7 +171,7 @@ def GetDirs(path):
 def GetImages(path):
     global checkMGCL
     images = []
-    for image in os.listdir(path):
+    for image in sorted(os.listdir(path)):
         if os.path.isfile(path + image):
             # if specified, do not rename images that already contain MGCL
             if "MGCL" not in image and checkMGCL == False:
@@ -232,11 +232,10 @@ def ProcessData(path):
         # get and check specimen id
         scanned_id = int(new_name.split('_')[1])
         
-        if "lateral" in new_name.lower() or "lat" in new_name.lower():
+        if "lateral" in image.lower() or "lat" in image.lower() or "_l" in image.lower():
             # Lateral
-            new_name.replace("lat", "")
-            new_name.replace("eral", "")
             new_name += '_L'
+        
         
         else:
             if not occurrences or not scanned_id in occurrences:
@@ -246,11 +245,17 @@ def ProcessData(path):
 
             if occurrences[scanned_id] == 1:
                 # Dorsal
+                if("_L" in image or "_V" in image):
+                    print("Warning changed to Dorsal")
                 new_name += '_D'
             elif occurrences[scanned_id] == 2:
                 # Ventral
+                if("_L" in image or "_D" in image):
+                    print("Warning changed to Ventral")
                 new_name += '_V'
             else:
+                if("_L" in image or "_V" in image or "_D" in image):
+                    print("Warning changed to Manual")
                 new_name += '_MANUAL'
 
 
