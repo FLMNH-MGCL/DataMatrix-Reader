@@ -8,6 +8,7 @@ import subprocess
 from pyzbar.pyzbar import decode
 from PIL import Image
 import time
+import datetime
 
 """
 TODO:
@@ -25,6 +26,7 @@ old_new_paths = []
 occurrences = dict()
 checkMGCL = False
 SCAN_TIME = '30000'
+valid_imgs = ['JPG', 'jpg', 'jpeg', 'JPEG', 'CR2', 'cr2']
 """
 ##############################
 # ******** GUI CODE ******** #

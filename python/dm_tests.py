@@ -8,6 +8,22 @@ from timeit import default_timer as timer
 from pyzbar.pyzbar import decode
 from PIL import Image
 
+valid_imgs = ['JPG', 'jpg', 'jpeg', 'JPEG', 'CR2', 'cr2']
+
+def DirPrompt():
+    target_directory = input('\nEnter the directory containing the properly named specimen images:\n --> ')
+
+    # this check prevents trailing whitespace, an occurrence when dragging a folder into the terminal prompt in MacOS
+    if target_directory.endswith(' '):
+        target_directory = target_directory[:-1]
+
+    # ensures trailing / is present
+    if not target_directory.endswith('/') or not target_directory.endswith('\\'):
+        target_directory += '/'
+
+    return target_directory
+
+
 def GetID(filename):
     id = filename.split('_')[1].split('.')[0]
     return int(id)
@@ -24,17 +40,25 @@ def CheckMatch(id, scanned_id):
 
 def GetImages(path):
     images = []
-    for image in os.listdir(path):
-        if os.path.isfile(path + image):
+    for image in sorted(os.listdir(path)):
+        if os.path.isfile(path + image) and image.split('.')[1] in valid_imgs:
             images.append(image)
     return images
+
+
+def GetDirs(path):
+    dirs = []
+    for dir in sorted(os.listdir(path)):
+        if os.path.isdir(path + dir + '/'):
+            dirs.append(dir)
+    return dirs
 
 """
 attempts to scan data from data matrix, returns result. 
 result of image without data matrix will be empty string
 """
 def DM_Read(path):
-    p = subprocess.Popen('cat ' + path + ' | dmtxread --stop-after=1 -m15000', shell=True,
+    p = subprocess.Popen('cat ' + path + ' | dmtxread --stop-after=1 -m40000 -Y50% -x50%', shell=True,
         stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     scanned = str(p.stdout.readline())
@@ -54,6 +78,10 @@ called after failed DM_Read. Attempts 1-d barcode read with pyzbar
 """
 def BarcodeRead(path):
     decoded = decode(Image.open(path))
+    
+    if len(decoded) < 1:
+        return ""
+
     data = str(decoded[0].data)
 
     if len(data) > 0:
@@ -67,54 +95,47 @@ def BarcodeRead(path):
 This script will not explore past the parent directory (ie there is no recursion).
 The trials loop will repeat the scanning of the same folder X amount of times, instead.
 """
-def StandardTest():
-    target_directory = input('\nEnter the directory containing the properly named specimen images:\n --> ')
+def RecursiveStandard(target_directory):
+    for dir in GetDirs(target_directory):
+        RecursiveStandard(target_directory + dir + '/')
+    print('WORKING IN ' + target_directory)
+    StandardTest(target_directory)
 
-    # this check prevents trailing whitespace, an occurrence when dragging a folder into the terminal prompt in MacOS
-    if target_directory.endswith(' '):
-        target_directory = target_directory[:-1]
-
-    # ensures trailing / is present
-    if not target_directory.endswith('/') or not target_directory.endswith('\\'):
-        target_directory += '/'
-    trials = int(input('\nHow many times would you like to run this test? (1-100)\n --> '))
-    
-    total_passed = 0
-    total_failed = 0
+def StandardTest(target_directory):
+    #total_failed = 0
     total_time = 0
     total_scans = 0
     
     global_start = timer()
-    for i in range (0,trials):
-        print('\nSTARTING TRIAL {}\n'.format(i + 1))
 
-        failed = 0
-        passed = 0
+    failed = 0
+    passed = 0
 
-        start = timer()
-        for image in GetImages(target_directory):
-            path = target_directory + image
-            true_id = GetID(image)
-            scanned = DM_Read(path)
+    for image in GetImages(target_directory):
+        path = target_directory + image
+        true_id = GetID(image)
+        scanned = DM_Read(path)
 
-            # try again, looking for 1d instead
-            if scanned == "":
-                print("Could not find data matrix, search for barcode...")
-                scanned = BarcodeRead(path)
+        # try again, looking for 1d instead
+        if scanned == "":
+            print("Could not find data matrix, search for barcode...")
+            scanned = BarcodeRead(path)
 
-            if scanned == "":
-                print("No Data Matrix or 1D Barcode found in image.")
-                continue
-
-            scanned_id = int(str(scanned.strip().replace('\'', '')).split('_')[1])
-            
-            ret = CheckMatch(true_id, scanned_id)
-            if ret == 0:
-                passed += 1
-            else:
-                failed += 1
+        if scanned == "":
+            print(image + '...FAILED...No Data Matrix or 1D Barcode found in image.')
+            failed += 1
             total_scans += 1
-        end = timer()
+            continue
+
+        print(scanned)
+        scanned_id = int(str(scanned.strip().replace('\'', '')).split('_')[1])
+        
+        ret = CheckMatch(true_id, scanned_id)
+        if ret == 0:
+            passed += 1
+        else:
+            failed += 1
+        total_scans += 1
 
         
         #print ('\nTRAIL {} ENDED.\n{} / {} SCANNED CORRECTLY.\n{} SECONDS TOTAL, AVG {} IMAGES SCNANED PER SECOND.\n'.format(i + 1, passed, (passed + failed), 
@@ -124,9 +145,16 @@ def StandardTest():
         
 
     global_end = timer()
-    return
     total_time = global_end - global_start
-    print('ALL TRIALS COMPLETED.\nTOTAL ACCURACY: {} / {} CORRECTLY SCANNED\nTOTAL TIME: {}\nSECONDS PER SCAN: {}'.format(total_passed, total_scans, total_time, total_time / total_scans))
+    print('ALL TRIALS COMPLETED.\nTOTAL ACCURACY: {} / {} CORRECTLY SCANNED\nTOTAL TIME: {}\nSECONDS PER SCAN: {}'.format(passed, total_scans, total_time, total_time / total_scans))
+
+
+def StandardPrompt(target_directory):
+    recurse = input ('\nDo you want to run recursively? \n [1]yes \n [2]no\n')
+    if recurse == 'yes' or recurse == 'y' or recurse == '1':
+        RecursiveStandard(target_directory)
+    else:
+        StandardTest(target_directory)
 
 """
 This will test the differences in speed between decoding data matrices in JPG images versus PNG images
@@ -209,7 +237,7 @@ def JPGvsPNG():
 def main():
     test = input("Enter which test to run: \n [1] Standard Test (tests all images in directory) \n [2] JPG vs PNG (tests speed differences between JPG and PNG) \n --> ")
     if test == '1' or 'Standard Test':
-        StandardTest()
+        StandardPrompt(DirPrompt())
     else:
         JPGvsPNG()
 
