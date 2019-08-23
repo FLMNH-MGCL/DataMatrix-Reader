@@ -28,6 +28,31 @@ def AskUsage():
         print(prompt)
         time.sleep(10)
 
+def Log(path):
+    global old_new_paths
+    d = datetime.datetime.today()
+    date = str(d.year) + '_' + str(d.month) + '_' + str(d.day)
+    filename = path + 'DMREAD_SCRIPT_LOG_' + date
+
+    count = ''
+    num = 0
+    while os.path.exists(filename + count + '.csv'):
+        if num == 0:
+            filename += '_'
+        num += 1
+        count = str(num)
+
+    if num == 0:
+        filename = filename + '.csv'
+    else:
+        filename = filename + count + '.csv'
+
+    csv_file = open(filename, mode='w')
+    csv_file.write('Old Path,New Path\n')
+    for old_path,new_path in old_new_paths:
+        csv_file.write(old_path + ',' + new_path + '\n')
+
+
 
 def GetDirs(path):
     subdirectories = []
@@ -44,7 +69,15 @@ def GetImages(path):
         if os.path.isfile(path + image) and image.split('.')[1] in valid_imgs:
             images.append(image)
     return images
-    
+
+
+def GetCR2s(path):
+    cr2s = []
+    for cr2 in sorted(os.listdir(path)):
+        if os.path.isfile(path + cr2) and cr2.split('.')[1] == 'CR2':
+            cr2s.append(cr2)
+    return cr2s
+
 
 def RecursiveProcessData(path):
     for dir in GetDirs(path):
@@ -58,7 +91,7 @@ takes path to image, scans matrix, returns new name
 def DMRead(path):
     # stop if nothing is found after 15 seconds (15000 milliseconds)
     global SCAN_TIME
-    print('cat ' + path + ' | dmtxread --stop-after=1 -m' + SCAN_TIME)
+    #print('cat ' + path + ' | dmtxread --stop-after=1 -m' + SCAN_TIME)
     p = subprocess.Popen('cat ' + path + ' | dmtxread --stop-after=1 -m' + SCAN_TIME, shell=True,
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     return str(p.stdout.readline())
@@ -69,12 +102,11 @@ def ProcessData(path):
     global old_new_paths
     global occurrences
 
+    cr2s = GetCR2s(path)
     for image in GetImages(path):
         # scanning
         ext = '.' + image.split('.')[1]
         arg = path + image
-
-        print(image)
 
         new_name = DMRead(arg)
         if "MGCL" not in new_name:
@@ -117,8 +149,16 @@ def ProcessData(path):
         print ('Renaming {} as {}\n'.format(path + image, path + new_name + ext))
         old_new_paths.append(tuple((path + image, path + new_name + ext)))
 
+        # find and rename corresponding cr2
+        if image.split('.')[0] + '.CR2' in cr2s:
+            cr2_name = new_name.split('.')[0] + '.CR2'
+            #os.rename(path + image.split('.')[0] + '.CR2', path + cr2_name)
+            print('Renaming {} as {}\n'.format(path + image.split('.')[0] + '.CR2', path + cr2_name))
+            old_new_paths.append(tuple((path + image.split('.')[0] + '.CR2', path + cr2_name)))
 
-def Wait():
+
+
+def Wait(path):
     wait = True
     print("Program completed... Please look over changes.")
 
@@ -129,6 +169,7 @@ def Wait():
             wait = False
         elif undo == '2' or undo == 'n' or undo == 'no':
             wait = False
+            Log(path)
         else:
             print('Input error. Invalid option.')
             continue
@@ -168,10 +209,10 @@ def main():
 
     if method == '1':
         ProcessData(path)
-        Wait()
+        Wait(path)
     elif method == '2':
         RecursiveProcessData(path)
-        Wait()
+        Wait(path)
     else:
         print("Input error.")
         sys.exit(1)
