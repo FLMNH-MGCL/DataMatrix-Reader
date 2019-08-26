@@ -16,12 +16,13 @@ def AskUsage():
             "This program will help to automate the renaming of specimen images by automatically finding and " \
             "decoding data matrices / barcodes in the images. On start, you will be prompted with whether or not " \
             "to view this help message. After which, the program will begin in 10 seconds. You will enter the path " \
-            "to a folder containing the families of the collected speciment. On a mac, you may simply drag the folder " \
+            "to a folder containing the images of the digitized specimen. On a mac, you may simply drag the folder " \
             "into the terminal window. You will then have the option to run the program recursively (scanning all " \
-            "images in all subfolders) or standardly (scanning only in provided folder, no additional subfolders). " \
-            "All changes to file names are temporarily saved, so please review the changes when prompted. You will " \
+            "images in all subfolders) or standard (scanning only in provided folder, no additional subfolders). " \
+            "All changes to file names are temporarily saved, so please review the changes when prompted.\n\nYou will " \
             "have the chance to undo the program's renaming ONLY WHEN PROMPTED, so it is important to check the results " \
-            "before closing / terminating the project"
+            "before closing / terminating the project. If you choose to undo, a log file will not be generated. If you realize " \
+            "there is a mistake afterwards, you can use the log file for undoing the changes using the specific undo script."
         )
     wanted = input("\nDo you want to see the usage information?\n [1]yes\n [2]no\n --> ")
     if wanted == '1' or wanted == 'y' or wanted == 'yes':
