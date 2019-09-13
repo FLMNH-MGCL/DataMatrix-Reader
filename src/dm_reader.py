@@ -1,147 +1,16 @@
 import os
 import sys
 import subprocess
-#from tkinter import *
-#from tkinter import StringVar
-#from tkinter import filedialog
-#import tkinter.messagebox
 from pyzbar.pyzbar import decode
 from PIL import Image
 import time
 import datetime
-
-"""
-TODO:
--   Implement some way of knowing the side of the specimen (eg ventral, dorsal, lateral).
-    -   This will involve keeping track of IDs that have been scanned X amount of times already, 
-        perhaps 1st scan is always dorsal, 2nd is always ventral, etc. This would have to be thought of / 
-        implemented during the actual phototaking sessions
-    -   Use of dictionary (ID mapped to occurance count) is probably best
-- Look into implementing some way of reading the genus and species from the picture and sort it accordingly
-√   Implement recursive option for user
-√   Implement GUI option for user
-"""
 
 old_new_paths = []
 occurrences = dict()
 checkMGCL = False
 SCAN_TIME = '30000'
 valid_imgs = ['JPG', 'jpg', 'jpeg', 'JPEG', 'CR2', 'cr2']
-"""
-##############################
-# ******** GUI CODE ******** #
-class GUI:
-    window = None
-    target_dir = None
-    recursively = False
-
-    def __init__(self, window):
-        self.window = self.InitWindow(window)
-
-    def InitWindow(self, window):
-        # ***** GENERAL WINDOW ***** #
-        window.geometry("500x300")
-        window.title('FLMNH Data Matrix Tool')
-        #window.config(background='seashell3')
-        #window.config(background='dimgray')
-
-        # ***** STATUS BAR ***** #
-        status_message = StringVar()
-        status = Label(window, textvariable=status_message, bd=1, relief=SUNKEN, anchor=W)
-        status_message.set("Waiting...")
-        status.pack(side=BOTTOM, fill=X)
-        
-        # ***** TOP MENU ***** #
-        menu = Menu(window)
-        window.config(menu=menu)
-        subMenu = Menu(menu)
-        menu.add_cascade(label="Help", menu=subMenu)
-        subMenu.add_command(label="Usage", command=self.HelpPromt)
-
-        # ***** BUTTONS ***** #
-        button = Button(window, text="Select Folder", command=self.SelectFolder)
-        button.pack()
-
-        toggle = IntVar()
-        recursion_checkbox = Checkbutton(window, text='Recursive', variable=toggle, command= lambda: self.ToggleRecursive(toggle.get()))
-        recursion_checkbox.pack()
-
-        # review_data_checkbox = Checkbutton(window, text='Review MGCL (Legacy Cleanup)', variable=toggle, command= lambda: self.ToggleRevision(toggle.get()))
-        # review_data_checkbox.pack()
-
-        run_button = Button(window, text="Run", command= lambda: self.Run(status_message))
-        run_button.pack()
-
-        undo_button = Button(window, text="Undo Changes", command= lambda: self.Undo(status_message))
-        undo_button.pack()
-
-        quit_button = Button(window, text='Quit', command=window.destroy)
-        quit_button.pack()
-
-        return window
-
-
-    def mainloop(self):
-        self.window.mainloop()
-
-
-    def Run(self, status_message):
-        if self.target_dir == None:
-            tkinter.messagebox.showerror(title='User Error', message='You must select a path first.')
-            return
-
-        # check trailing slash
-        if not self.target_dir.endswith('/') or not self.target_dir.endswith('\\'):
-            self.target_dir += '/'
-
-        # no errors up to this point, update status to Running
-        status_message.set('Running...')
-
-        # check method
-        if not self.recursively:
-            ProcessData(self.target_dir)
-        elif self.recursively:
-            RecursiveProcessData(self.target_dir)
-
-        # finished successfully
-        status_message.set('Finished...')
-
-
-    def Undo(self, status_message):
-        # call non-class Undo function
-        message = Undo()
-
-        # update status bar / pop up message for error
-        if message == 'There is nothing to undo.':
-            tkinter.messagebox.showerror(title='User Error', message=message)
-        else:
-            status_message.set(message)
-
-
-    def ToggleRecursive(self, value):
-        if value == 0:
-            self.recursively = False
-        elif value == 1: 
-            self.recursively = True
-
-
-    def SelectFolder(self):
-        self.target_dir = filedialog.askdirectory()
-
-
-    def HelpPromt(self):
-        prompt = str(
-            "This program will help you to automate the renaming of specimen images by automatically finding and " \
-            "decoding data matrices in the images. Simply select the target folder, select whether or not to run " \
-            "the algorithm recursively and then hit run.\n\nTo run the algorithm recursively means that in addition " \
-            "to the target directory (the folder you selected), every subdirectory (every folder within that folder) " \
-            "will also undergo the scanning and renaming process. For example, if you select a target folder path of " \
-            "/home/user/target/ and that filder contains a folder called random, running recursively will change files " \
-            "in both target and random (and any additional subfolders in random).\n\nAll changes are temporarily recorded " \
-            "in the program, so if you want to undo the script did just hit the undo button BEFORE you close the window!"
-        )
-        tkinter.messagebox.showinfo('Usage Help', prompt)
-"""
 
 #############################
 # ******* MAIN CODE ******* #
@@ -162,6 +31,33 @@ def AskUsage():
         print(prompt)
         time.sleep(10)
 
+
+def Log(path):
+    global old_new_paths
+    d = datetime.datetime.today()
+    date = str(d.year) + '_' + str(d.month) + '_' + str(d.day)
+    filename = path + 'DMREAD_SCRIPT_LOG_' + date
+
+    count = ''
+    num = 0
+    while os.path.exists(filename + count + '.csv'):
+        if num == 0:
+            filename += '_'
+        num += 1
+        count = str(num)
+
+    if num == 0:
+        filename = filename + '.csv'
+    else:
+        filename = filename + count + '.csv'
+
+    csv_file = open(filename, mode='w')
+    csv_file.write('Old Path,New Path\n')
+    for old_path,new_path in old_new_paths:
+        csv_file.write(old_path + ',' + new_path + '\n')
+
+
+
 def GetDirs(path):
     subdirectories = []
     for folder in sorted(os.listdir(path)):
@@ -175,14 +71,19 @@ def GetImages(path):
     images = []
     for image in sorted(os.listdir(path)):
         if os.path.isfile(path + image):
-            # if specified, do not rename images that already contain MGCL
-            if "MGCL" not in image and checkMGCL == False:
-                images.append(image)
-            # default
-            elif checkMGCL == True:
+            if os.path.isfile(path + image) and image.split('.')[1] in valid_imgs:
                 images.append(image)
     return images
     
+
+
+def GetCR2s(path):
+    cr2s = []
+    for cr2 in sorted(os.listdir(path)):
+        if os.path.isfile(path + cr2) and cr2.split('.')[1] == 'CR2':
+            cr2s.append(cr2)
+    return cr2s
+
 
 def RecursiveProcessData(path):
     for dir in GetDirs(path):
@@ -194,13 +95,14 @@ def RecursiveProcessData(path):
 takes path to image, scans matrix, returns new name
 """
 def BarcodeRead(path):
-    print("DMTX not found, looking for legacy barcode:")
+    print("Data Matrix could not be found, checking for a legacy barcode:")
     decoder = decode(Image.open(path))
     try:
         name = str(decoder[0].data)
     except:
         name = "nothing"
     return name
+
 
 def DMRead(path):
     # stop if nothing is found after 15 seconds (15000 milliseconds)
@@ -209,12 +111,14 @@ def DMRead(path):
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     return str(p.stdout.readline())
 
+
 def ProcessData(path):
     print("\nWorking in... {}\n".format(path))
     
     global old_new_paths
     global occurrences
 
+    cr2s = GetCR2s(path)
     for image in GetImages(path):
         # scanning
         ext = '.' + image.split('.')[1]

@@ -146,14 +146,14 @@ def ProcessData(path):
 
 
         # renaming
-        # os.rename(path + image, path + (new_name + ext))
+        os.rename(path + image, path + (new_name + ext))
         print ('Renaming {} as {}\n'.format(path + image, path + new_name + ext))
         old_new_paths.append(tuple((path + image, path + new_name + ext)))
 
         # find and rename corresponding cr2
         if image.split('.')[0] + '.CR2' in cr2s:
             cr2_name = new_name.split('.')[0] + '.CR2'
-            #os.rename(path + image.split('.')[0] + '.CR2', path + cr2_name)
+            os.rename(path + image.split('.')[0] + '.CR2', path + cr2_name)
             print('Renaming {} as {}\n'.format(path + image.split('.')[0] + '.CR2', path + cr2_name))
             old_new_paths.append(tuple((path + image.split('.')[0] + '.CR2', path + cr2_name)))
 
@@ -179,7 +179,7 @@ def Undo():
     global old_new_paths
     print('\nUndoing changes...')
     for old_path,new_path in old_new_paths:
-        #os.rename(new_path, old_path)
+        os.rename(new_path, old_path)
         print ('Renaming {} back to {}\n'.format(new_path, old_path))
     return 'Success... Restored original state.'
 
