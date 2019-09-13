@@ -8,7 +8,6 @@ import datetime
 
 old_new_paths = []
 occurrences = dict()
-checkMGCL = False
 SCAN_TIME = '30000'
 valid_imgs = ['JPG', 'jpg', 'jpeg', 'JPEG', 'CR2', 'cr2']
 
@@ -19,12 +18,13 @@ def AskUsage():
             "This program will help to automate the renaming of specimen images by automatically finding and " \
             "decoding data matrices / barcodes in the images. On start, you will be prompted with whether or not " \
             "to view this help message. After which, the program will begin in 10 seconds. You will enter the path " \
-            "to a folder containing the families of the collected speciment. On a mac, you may simply drag the folder " \
+            "to a folder containing the images of the digitized specimen. On a mac, you may simply drag the folder " \
             "into the terminal window. You will then have the option to run the program recursively (scanning all " \
-            "images in all subfolders) or standardly (scanning only in provided folder, no additional subfolders). " \
-            "All changes to file names are temporarily saved, so please review the changes when prompted. You will " \
+            "images in all subfolders) or standard (scanning only in provided folder, no additional subfolders). " \
+            "All changes to file names are temporarily saved, so please review the changes when prompted.\n\nYou will " \
             "have the chance to undo the program's renaming ONLY WHEN PROMPTED, so it is important to check the results " \
-            "before closing / terminating the project"
+            "before closing / terminating the project. If you choose to undo, a log file will not be generated. If you realize " \
+            "there is a mistake afterwards, you can use the log file for undoing the changes using the specific undo script."
         )
     wanted = input("\nDo you want to see the usage information?\n [1]yes\n [2]no\n --> ")
     if wanted == '1' or wanted == 'y' or wanted == 'yes':
@@ -67,7 +67,6 @@ def GetDirs(path):
 
 
 def GetImages(path):
-    global checkMGCL
     images = []
     for image in sorted(os.listdir(path)):
         if os.path.isfile(path + image):
@@ -124,11 +123,11 @@ def ProcessData(path):
         ext = '.' + image.split('.')[1]
         arg = path + image
 
-        print(image)
-
         new_name = DMRead(arg)
         if "MGCL" not in new_name:
             new_name = BarcodeRead(arg)
+            print('Could not find matrix in ' + image + '...')
+            continue
     
         # Replace garbage characters read in
         new_name = str(new_name).replace("b\'", '').replace(' ', '_').replace('\'', '')
@@ -138,10 +137,11 @@ def ProcessData(path):
         # get and check specimen id
         scanned_id = int(new_name.split('_')[1])
         
-        if "lateral" in image.lower() or "lat" in image.lower() or "_l" in image.lower():
+        if "lateral" in new_name.lower() or "lat" in new_name.lower():
             # Lateral
+            new_name.replace("lat", "")
+            new_name.replace("eral", "")
             new_name += '_L'
-        
         
         else:
             if not occurrences or not scanned_id in occurrences:
@@ -151,24 +151,26 @@ def ProcessData(path):
 
             if occurrences[scanned_id] == 1:
                 # Dorsal
-                if("_L" in image or "_V" in image):
-                    print("Warning changed to Dorsal")
                 new_name += '_D'
             elif occurrences[scanned_id] == 2:
                 # Ventral
-                if("_L" in image or "_D" in image):
-                    print("Warning changed to Ventral")
                 new_name += '_V'
             else:
-                if("_L" in image or "_V" in image or "_D" in image):
-                    print("Warning changed to Manual")
                 new_name += '_MANUAL'
 
 
         # renaming
-        # os.rename(path + image, path + (new_name + ext))
+        os.rename(path + image, path + (new_name + ext))
         print ('Renaming {} as {}\n'.format(path + image, path + new_name + ext))
         old_new_paths.append(tuple((path + image, path + new_name + ext)))
+
+        # find and rename corresponding cr2
+        if image.split('.')[0] + '.CR2' in cr2s:
+            cr2_name = new_name.split('.')[0] + '.CR2'
+            os.rename(path + image.split('.')[0] + '.CR2', path + cr2_name)
+            print('Renaming {} as {}\n'.format(path + image.split('.')[0] + '.CR2', path + cr2_name))
+            old_new_paths.append(tuple((path + image.split('.')[0] + '.CR2', path + cr2_name)))
+
 
 
 def Wait():
@@ -190,14 +192,13 @@ def Undo():
     global old_new_paths
     print('\nUndoing changes...')
     for old_path,new_path in old_new_paths:
-        #os.rename(new_path, old_path)
+        os.rename(new_path, old_path)
         print ('Renaming {} back to {}\n'.format(new_path, old_path))
     return 'Success... Restored original state.'
 
 
 def main():
     global SCAN_TIME 
-    global checkMGCL
     
     #interface = input("\nWould you prefer to use a: \n [1]command-line interface \n [2]graphical interface \n--> ")
     interface = '1'
@@ -210,17 +211,6 @@ def main():
         while not new_time.isdigit():
             new_time = input('Input error. Please enter an integer. \n --> ')
         SCAN_TIME = new_time + '000'
-
-        askMGCL = 'nothing'
-        while askMGCL == 'nothing':
-            askMGCL = input('Would you like to scan images already containing (MGCL) in the filename \n [1] Yes \n [2] No \n --> ')
-            if askMGCL.lower() == "yes" or askMGCL.lower() == "y" or askMGCL == "1":
-                checkMGCL = True
-            elif askMGCL.lower() == "no" or askMGCL.lower() == "n" or askMGCL == "2":
-                checkMGCL = False
-            else:
-                askMGCL = 'nothing'
-                print('Please enter a correct value: ')
 
         # this check removes trailing whitespace, an occurrence when dragging a folder into the terminal prompt in MacOS
         if path.endswith(' '):
@@ -243,11 +233,6 @@ def main():
         else:
             print("Input error.")
             sys.exit(1)
-    
-    #elif interface == '2':
-    #    window = Tk()
-    #    my_gui = GUI(window)
-    #    my_gui.mainloop()
     
     else:
         print("Input error.")
