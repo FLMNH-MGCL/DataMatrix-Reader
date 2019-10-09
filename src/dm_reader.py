@@ -8,7 +8,7 @@ import datetime
 
 old_new_paths = []
 occurrences = dict()
-SCAN_TIME = '30000'
+SCAN_TIME = '5000'
 valid_imgs = ['JPG', 'jpg', 'jpeg', 'JPEG', 'CR2', 'cr2']
 
 #############################
@@ -105,6 +105,7 @@ def BarcodeRead(path):
 
 def DMRead(path):
     # stop if nothing is found after 15 seconds (15000 milliseconds)
+    global SCAN_TIME
     print('cat ' + path + ' | dmtxread --stop-after=1 -m' + SCAN_TIME)
     p = subprocess.Popen('cat ' + path + ' | dmtxread --stop-after=1 -m' + SCAN_TIME, shell=True,
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -173,7 +174,7 @@ def ProcessData(path):
 
 
 
-def Wait():
+def Wait(path):
     wait = True
     print("Program completed... Please look over changes.")
 
@@ -184,6 +185,7 @@ def Wait():
             wait = False
         elif undo == '2' or undo == 'n' or undo == 'no':
             wait = False
+            Log(path)
         else:
             print('Input error. Invalid option.')
             continue
@@ -199,46 +201,40 @@ def Undo():
 
 def main():
     global SCAN_TIME 
-    
-    #interface = input("\nWould you prefer to use a: \n [1]command-line interface \n [2]graphical interface \n--> ")
-    interface = '1'
-    if interface == '1':
-        # museum preformatted file names => MGCL_7digitnum
-        AskUsage()
-        path = input('\nPlease enter the path to the folder of images: \n --> ')
 
-        new_time = input('\nPlease enter the max amount of scan time to search for a matrix per image (in seconds): \n --> ')
-        while not new_time.isdigit():
-            new_time = input('Input error. Please enter an integer. \n --> ')
-        SCAN_TIME = new_time + '000'
+    # museum preformatted file names => MGCL_7digitnum
+    AskUsage()
+    path = input('\nPlease enter the path to the folder of images: \n --> ')
 
-        # this check removes trailing whitespace, an occurrence when dragging a folder into the terminal prompt in MacOS
-        if path.endswith(' '):
-            path = path[:-1]
+    new_time = input('\nPlease enter the max amount of scan time to search for a matrix per image (in seconds): \n --> ')
+    while not new_time.isdigit():
+        new_time = input('Input error. Please enter an integer. \n --> ')
+    SCAN_TIME = new_time + '000'
 
-        # ensures trailing '/' is present
-        if not path.endswith('/') or not path.endswith('\\'):
-            path += '/'
+    # this check removes trailing whitespace, an occurrence when dragging a folder into the terminal prompt in MacOS
+    if path.endswith(' '):
+        path = path[:-1]
 
-        method = input("\nChoose 1 of the following: \n [1]Standard (All files " \
-            "in this directory level only) \n [2]Recursive (All files in this " \
-            "directory level AND every level below) \n--> ")
+    # ensures trailing '/' is present
+    if not path.endswith('/') or not path.endswith('\\'):
+        path += '/'
 
-        if method == '1':
-            ProcessData(path)
-            Wait()
-        elif method == '2':
-            RecursiveProcessData(path)
-            Wait()
-        else:
-            print("Input error.")
-            sys.exit(1)
-    
+    method = input("\nChoose 1 of the following: \n [1]Standard (All files " \
+        "in this directory level only) \n [2]Recursive (All files in this " \
+        "directory level AND every level below) \n--> ")
+
+    if method == '1':
+        ProcessData(path)
+        Wait(path)
+    elif method == '2':
+        RecursiveProcessData(path)
+        Wait(path)
     else:
         print("Input error.")
         sys.exit(1)
 
     print ('Program completed...\n')
+
 
 if __name__ == '__main__':
     main()

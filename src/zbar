@@ -1,0 +1,15 @@
+Created temporary directory: /private/var/folders/mj/hl54kvj16d17ssg04h575r9rk62cmk/T/pip-ephem-wheel-cache-dcyp3q1v
+Created temporary directory: /private/var/folders/mj/hl54kvj16d17ssg04h575r9rk62cmk/T/pip-install-botpism3
+Cleaning up...
+ERROR: You must give at least one requirement to install (see "pip help install")
+Exception information:
+Traceback (most recent call last):
+  File "/Library/Frameworks/Python.framework/Versions/3.7/lib/python3.7/site-packages/pip/_internal/basecommand.py", line 228, in main
+    status = self.run(options, args)
+  File "/Library/Frameworks/Python.framework/Versions/3.7/lib/python3.7/site-packages/pip/_internal/commands/install.py", line 267, in run
+    self.name, wheel_cache
+  File "/Library/Frameworks/Python.framework/Versions/3.7/lib/python3.7/site-packages/pip/_internal/basecommand.py", line 331, in populate_requirement_set
+    '(see "pip help %(name)s")' % opts)
+pip._internal.exceptions.CommandError: You must give at least one requirement to install (see "pip help install")
+You are using pip version 10.0.1, however version 19.2.3 is available.
+You should consider upgrading via the 'pip install --upgrade pip' command.
