@@ -1,0 +1,11 @@
+{
+    "multipleOrientations": {
+        "state": true, 
+        "order": [
+            "D", 
+            "V", 
+            "Other"
+        ]
+    }, 
+    "code": "MGCL"
+}
