@@ -1,15 +1,13 @@
 import os
 import sys
 import subprocess
-from pyzbar.pyzbar import decode
-from PIL import Image
 import time
 import datetime
 
 old_new_paths = []
 occurrences = dict()
-SCAN_TIME = '5000'
-valid_imgs = ['JPG', 'jpg', 'jpeg', 'JPEG', 'CR2', 'cr2']
+SCAN_TIME = '30000'
+valid_imgs = ['JPG', 'jpg', 'jpeg', 'JPEG']
 
 #############################
 # ******* MAIN CODE ******* #
@@ -30,7 +28,6 @@ def AskUsage():
     if wanted == '1' or wanted == 'y' or wanted == 'yes':
         print(prompt)
         time.sleep(10)
-
 
 def Log(path):
     global old_new_paths
@@ -67,13 +64,12 @@ def GetDirs(path):
 
 
 def GetImages(path):
+    global checkMGCL
     images = []
     for image in sorted(os.listdir(path)):
-        if os.path.isfile(path + image):
-            if os.path.isfile(path + image) and image.split('.')[1] in valid_imgs:
-                images.append(image)
+        if os.path.isfile(path + image) and image.split('.')[1] in valid_imgs:
+            images.append(image)
     return images
-    
 
 
 def GetCR2s(path):
@@ -93,24 +89,13 @@ def RecursiveProcessData(path):
 """
 takes path to image, scans matrix, returns new name
 """
-def BarcodeRead(path):
-    print("Data Matrix could not be found, checking for a legacy barcode:")
-    decoder = decode(Image.open(path))
-    try:
-        name = str(decoder[0].data)
-    except:
-        name = "nothing"
-    return name
-
-
 def DMRead(path):
     # stop if nothing is found after 15 seconds (15000 milliseconds)
     global SCAN_TIME
-    print('cat ' + path + ' | dmtxread --stop-after=1 -m' + SCAN_TIME)
+    #print('cat ' + path + ' | dmtxread --stop-after=1 -m' + SCAN_TIME)
     p = subprocess.Popen('cat ' + path + ' | dmtxread --stop-after=1 -m' + SCAN_TIME, shell=True,
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     return str(p.stdout.readline())
-
 
 def ProcessData(path):
     print("\nWorking in... {}\n".format(path))
@@ -126,7 +111,7 @@ def ProcessData(path):
 
         new_name = DMRead(arg)
         if "MGCL" not in new_name:
-            new_name = BarcodeRead(arg)
+            #new_name = BarcodeRead(arg)
             print('Could not find matrix in ' + image + '...')
             continue
     
@@ -238,14 +223,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
-"""
-Notes / Bug report:
--   MacOS has a bug with tkinter revolving around a class (related to the folder finder dialog box)
-    being defined twice. This is not a problem with tkinter, it is a problem with Apple. Regardless, 
-    it is just a warning not an error. Since the definitions are identical it does not actually matter 
-    which one is eventually chosen to be used by the OS.
--   There is a bug with tkinter and MacOS Mojave dark theme. The text on tkinter buttons / widgets is 
-    not visible if dark mode is enabled. No such errors exist when running on Linux platforms, however.
-"""
