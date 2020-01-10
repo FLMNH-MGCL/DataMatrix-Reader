@@ -1,6 +1,8 @@
 import os
 import sys
 import subprocess
+from pyzbar.pyzbar import decode
+from PIL import Image
 import time
 import datetime
 
@@ -64,7 +66,6 @@ def GetDirs(path):
 
 
 def GetImages(path):
-    global checkMGCL
     images = []
     for image in sorted(os.listdir(path)):
         if os.path.isfile(path + image) and image.split('.')[1] in valid_imgs:
@@ -86,13 +87,20 @@ def RecursiveProcessData(path):
     ProcessData(path)
 
 
+def BarcodeRead(path):
+    decoder = decode(Image.open(path))
+    try:
+        name = str(decoder[0].data)
+    except:
+        name = "nothing"
+    return name
+
+
 """
 takes path to image, scans matrix, returns new name
 """
 def DMRead(path):
-    # stop if nothing is found after 15 seconds (15000 milliseconds)
     global SCAN_TIME
-    #print('cat ' + path + ' | dmtxread --stop-after=1 -m' + SCAN_TIME)
     p = subprocess.Popen('cat ' + path + ' | dmtxread --stop-after=1 -m' + SCAN_TIME, shell=True,
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     return str(p.stdout.readline())
@@ -109,11 +117,13 @@ def ProcessData(path):
         ext = '.' + image.split('.')[1]
         arg = path + image
 
-        new_name = DMRead(arg)
+        new_name = BarcodeRead(arg)
         if "MGCL" not in new_name:
-            #new_name = BarcodeRead(arg)
-            print('Could not find matrix in ' + image + '...')
-            continue
+            print('Could not find barcode... Searching for Datamatrix...')
+            new_name = DMRead(arg)
+            if "MGCL" not in new_name:
+                print('Could not find matrix in ' + image + '...')
+                continue
     
         # Replace garbage characters read in
         new_name = str(new_name).replace("b\'", '').replace(' ', '_').replace('\'', '')
