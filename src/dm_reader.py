@@ -133,7 +133,7 @@ def ProcessData(path):
         # get and check specimen id
         scanned_id = int(new_name.split('_')[1])
         
-        if "lateral" in new_name.lower() or "lat" in new_name.lower():
+        if "lateral" in new_name.lower() or "lat" in new_name.lower() or "_l" in new_name.lower():
             # Lateral
             new_name.replace("lat", "")
             new_name.replace("eral", "")
