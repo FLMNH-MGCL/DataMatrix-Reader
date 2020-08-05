@@ -1,5 +1,5 @@
 # DataMatrix-Reader
-This program was created or the Digitization Department of the McGuire Center for Lepidoptera at the Florida Museum of Natural History. Given a collection of specimen pictures, the program will decode the data matrix inside each pictrure and rename / sort them according to a museum-standardized naming scheme. 
+This program was created or the Digitization Department of the McGuire Center for Lepidoptera at the Florida Museum of Natural History. Given a collection of specimen pictures, the program will decode the data matrix inside each picture and rename / sort them according to a museum-standardized naming scheme. 
 
 ### Installation and Usage
 For now, this will only be compatible with Linux and MacOS systems. 
@@ -12,6 +12,8 @@ $ git clone <git_url>
 $ cd DataMatrix-Reader/src
 $ python dm_reader.py (or use python3 dm_reader.py)
 ```
+
+Currently, we rely on executing the utility scripts built using libdmtx in from python. In the future, we would like to instead build the libdmtx library and create our own bindings.
 
 This program's intended use is for the FLMNH, and as such the file naming scheme is specific. If this were to be adapted to a different project the renaming would need to be refactored in order to suit the new needs. 
 
