@@ -1,15 +1,30 @@
 import os
 import sys
 import subprocess
+import pandas as pd
 from pyzbar.pyzbar import decode
 from PIL import Image
 import time
 import datetime
+import re
 
 old_new_paths = []
 occurrences = dict()
 SCAN_TIME = '30000'
 valid_imgs = ['JPG', 'jpg', 'jpeg', 'JPEG']
+
+class Bound:
+    def __init__(self, lower, upper, genus, specificEpithet):
+        self.lower = lower
+        self.upper = upper
+        self.genus = genus
+        self.specificEpithet = specificEpithet
+    
+    def should_contain(self, num):
+        if num < self.lower or num > self.upper:
+            return False
+        
+        return True
 
 #############################
 # ******* MAIN CODE ******* #
@@ -105,14 +120,37 @@ def DMRead(path):
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     return str(p.stdout.readline())
 
-def ProcessData(path):
+def ProcessData(path, range_data=None):
     print("\nWorking in... {}\n".format(path))
     
     global old_new_paths
     global occurrences
 
+    genus = None
+    species = None
+
     cr2s = GetCR2s(path)
     for image in GetImages(path):
+        if range_data:
+            # remove potential dupl indicators
+            image_test = re.sub(r"\(\d+\)", "", image).strip()
+            int_in_img = int(''.join(filter(str.isdigit, image_test)))
+            
+            should_skip = False
+            for bound in range_data:
+                if bound.should_contain(int_in_img):
+                   should_skip = False
+
+                   genus = bound.genus
+                   species = bound.specificEpithet
+
+                   break
+                else:
+                    should_skip = True
+            
+            if should_skip:
+                continue
+
         # scanning
         ext = '.' + image.split('.')[1]
         arg = path + image
@@ -132,6 +170,9 @@ def ProcessData(path):
 
         # get and check specimen id
         scanned_id = int(new_name.split('_')[1])
+
+        if genus is not None and species is not None:
+            new_name += "_{}_{}".format(genus, species) 
         
         if "lateral" in new_name.lower() or "lat" in new_name.lower() or "_l" in new_name.lower():
             # Lateral
@@ -193,6 +234,67 @@ def Undo():
         print ('Renaming {} back to {}\n'.format(new_path, old_path))
     return 'Success... Restored original state.'
 
+def get_existing_path(path, is_dir):
+    correct_path = path
+    while not os.path.exists(correct_path) or (is_dir and not os.path.isdir(correct_path)) or (not is_dir and os.path.isdir(correct_path)):
+        print("\nCould not find path / file in filesystem (or is wrong type, i.e. requires file but provided directory)...")
+        correct_path = input('\nPlease input an appropriate path: \n --> ')
+        correct_path = correct_path.strip()
+
+        if is_dir:
+            if not correct_path.endswith('/') or not correct_path.endswith('\\'):
+                correct_path += '/'
+        else:
+            if correct_path.endswith('/'):
+                correct_path = correct_path[:-1]
+
+            elif correct_path.endswith('\\'):
+                correct_path = correct_path[:-2]
+
+    
+    return correct_path
+
+def file_prompt(prompt):
+    file_path = input(prompt)
+    file_path = file_path.strip()
+    file_path = file_path.replace('\\', '/')
+
+    if file_path.endswith('/') or file_path.endswith('\\'):
+        file_path = file_path[:-1]
+    
+    return file_path
+
+def getrange():
+    lower_bound = None
+    while True:
+        try:
+            lower_bound = int(input("\nPlease enter a lower bound for the range: "))
+            break
+        except:
+            print("Invalid entry. Please only input integers")
+            lower_bound = None
+
+        if lower_bound is None or type(lower_bound) != type(1):
+            print("Invalid entry. Please only input integers")
+            lower_bound = None
+    
+    upper_bound = None
+    while True:
+        try:
+            upper_bound = int(input("\nPlease enter an upper bound for the range: "))
+            break
+        except:
+            print("Invalid entry. Please only input integers")
+            upper_bound = None
+
+        if upper_bound is None or type(upper_bound) != type(1):
+            print("Invalid entry. Please only input integers")
+            upper_bound = None
+
+    return lower_bound, upper_bound
+    
+
+
 
 def main():
     global SCAN_TIME 
@@ -214,12 +316,27 @@ def main():
     if not path.endswith('/') or not path.endswith('\\'):
         path += '/'
 
+    range_data = None
+    ranged_run = input("\nDo you have a range to provide for the image files to check?\n [1]yes\n [2]no\n --> ")
+    if ranged_run == '1' or ranged_run == 'y' or ranged_run == 'yes':
+        csv_path = get_existing_path(file_prompt("Enter the path to the CSV of range data: "), False)
+        csv_data = pd.read_csv(csv_path, header=0)
+        range_data = []
+        for _, row in csv_data.iterrows():
+            lower_bound = int(''.join(filter(str.isdigit, row['ImageStart'])))
+            upper_bound = int(''.join(filter(str.isdigit, row['ImageStop'])))
+            print(lower_bound, upper_bound)
+            genus = row['genus']
+            species = row['specificEpithet']
+            range_data.append(Bound(lower_bound, upper_bound, genus, species))
+
+
     method = input("\nChoose 1 of the following: \n [1]Standard (All files " \
         "in this directory level only) \n [2]Recursive (All files in this " \
         "directory level AND every level below) \n--> ")
 
     if method == '1':
-        ProcessData(path)
+        ProcessData(path, range_data)
         Wait(path)
     elif method == '2':
         RecursiveProcessData(path)
