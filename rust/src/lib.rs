@@ -93,7 +93,7 @@ pub fn run(starting_path: &str) -> usize {
         let decoded_data = dmtxread(path_buffer.to_str().unwrap(), "30000");
 
         if decoded_data == "" {
-            println!("No datamatrix data could be extracted for {}", path_buffer.to_str().unwrap());
+            println!("No datamatrix data could be extracted for {}\n", path_buffer.to_str().unwrap());
             continue;
         }
 
@@ -114,7 +114,7 @@ pub fn run(starting_path: &str) -> usize {
 
                 occurrences.push(path_buffer.to_str().unwrap().to_string());
 
-                println!("Data extracted, proper name determined to be: {}", full_name);
+                println!("Data extracted, proper name determined to be: {}\n", full_name);
             },
 
             _ => {
@@ -123,7 +123,7 @@ pub fn run(starting_path: &str) -> usize {
                 edits.insert(path_buffer.to_str().unwrap().to_string(), full_name.clone());
                 specimen.insert(proper_name.as_str().to_string(), vec![path_buffer.to_str().unwrap().to_string()]);
 
-                println!("Data extracted, proper name determined to be: {}", full_name);
+                println!("Data extracted, proper name determined to be: {}\n", full_name);
             }
         };
 
