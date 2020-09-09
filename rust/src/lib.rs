@@ -1,11 +1,15 @@
 use std::process::{Command};
 use std::collections::HashMap;
+use std::time::Instant;
+use std::io;
+use std::io::prelude::*; 
 
 extern crate regex;
 extern crate glob;
 
 use glob::glob;
 // use regex::Regex;
+use fancy_regex::Regex;
 
 // #[derive(PartialEq, PartialOrd)]
 // pub enum RUN_TYPES {
@@ -63,7 +67,11 @@ pub fn zbarimg(path: &str) -> String {
 ///
 /// * `starting_path` - A str filesystem path, the location to start at
 pub fn collect(starting_path: &str) -> Vec<std::path::PathBuf>{
-    println!("Collecting files...");
+    print!("Collecting files...");
+    io::stdout().flush().unwrap();
+
+
+    let start = Instant::now();
 
     let pattern_JPG = format!("{}/**/*.JPG", starting_path);
     let pattern_jpg = format!("{}/**/*.jpg", starting_path);
@@ -78,6 +86,10 @@ pub fn collect(starting_path: &str) -> Vec<std::path::PathBuf>{
         _ => std::vec::Vec::default()
     };
 
+    let end = start.elapsed();
+
+    println!("done!");
+
     if files.len() < 1 {
         println!("No files to collect...");
         return files;
@@ -86,23 +98,46 @@ pub fn collect(starting_path: &str) -> Vec<std::path::PathBuf>{
 
     files.sort_by(|a,b| a.as_os_str().cmp(b.as_os_str()));
 
-    println!("Files collected...");
+    println!("Files collected in {:?}...\n", end);
 
 
     files
 }
 
 fn convert_decoded_to_name(decoded_data: &str) -> String {
-    // let re = Regex::new(r"").unwrap();
-    // let result = re.replace_all("Hello World!", "x");
+    let re = Regex::new(r"(.*?)MGCL\s?[0-9]{7,8}").unwrap();
 
-    let result = decoded_data.replace(" ", "_").replace("CODE-128:", "");
+    let mut regex_ret = re.captures(&decoded_data).unwrap();
 
+    let mut result = "";
+
+    match regex_ret {
+        Some(captures) => {
+            match captures.get(0) {
+                Some(group) => {
+                    let decoded_vec = decoded_data.split_at(group.start());
+                    // println!("{:?}", text.split_at(group.start()));
+                    result = decoded_vec.1;
+                },
+                _ => ()
+            }
+        },
+        _ => ()
+    }
+
+    // remove trailing, leading whitespace, 
+    // newlines, replace spaces with _ and remove instances of CODE-128
     result
+        .trim()
+        .replace("\n", "")
+        .replace(" ", "_")
+        .replace("CODE-128:", "").to_string()
 }
 
 /// Ensure the libraries / CLI utilities are installed on the system, will panic on failure
 fn check_installations() {
+    print!("Checking installations of dmtx-utils and zbar...");
+    io::stdout().flush().unwrap();
 
     Command::new("dmtxread")
         .arg("--help")
@@ -114,16 +149,12 @@ fn check_installations() {
         .output()
         .expect("zbarimg command failed to start. Please ensure zbar is installed in your system");
 
-    // TEST FAILURE
-    // let test = Command::new("zbafdaffdafrimg")
-    //     .arg("--help")
-    //     .output()
-    //     .expect("zbafdaffdafrimg command failed to start. Please ensure it is installed in your system");
+    println!("passed!");
 }
 
 
 
-// todo: remove return
+// todo: remove return - maybe?
 /// Decoded datamatrices and barcodes at and below given OS path starting point
 ///
 /// # Arguments
@@ -132,7 +163,6 @@ fn check_installations() {
 /// * `scane_time` - A str representing the maximum time in ms to search for a datamatrix
 /// * `include_barcodes` - A bool that will include barcode (zbar) attempts on failed dmtx decodes
 pub fn run(starting_path: &str, scan_time: &str, include_barcodes: bool) -> usize {
-    println!("Checking installations of dmtx-utils and zbar...");
     check_installations();
     
     let mut specimen: HashMap::<String, std::vec::Vec<String>> = HashMap::new();
@@ -145,20 +175,23 @@ pub fn run(starting_path: &str, scan_time: &str, include_barcodes: bool) -> usiz
     // println!("{:?}", files);
 
     for path_buffer in files {
-        println!("Attempting to extract datamatrix data from {}...", path_buffer.to_str().unwrap());
+        print!("Attempting to extract datamatrix data from {}...", path_buffer.to_str().unwrap());
+        io::stdout().flush().unwrap();
 
         let mut decoded_data = dmtxread(path_buffer.to_str().unwrap(), scan_time);
 
         if decoded_data == "" {
-            println!("No datamatrix data could be extracted for {}\n", path_buffer.to_str().unwrap());
+            println!("failed! (no datamatrix data could be extracted)\n");
 
             if include_barcodes {
-                println!("Attempting to extract barcode data from {}...", path_buffer.to_str().unwrap());
+                print!("Attempting to extract barcode data from {}...", path_buffer.to_str().unwrap());
+                io::stdout().flush().unwrap();
+
 
                 decoded_data = zbarimg(path_buffer.to_str().unwrap());
 
                 if decoded_data == "" {
-                    println!("No barcode data could be extracted for {}\n", path_buffer.to_str().unwrap());
+                    println!("failed! (no barcode data could be extracted)\n");
                     failures.push(path_buffer.to_str().unwrap().to_string());
 
                     continue;
@@ -167,11 +200,11 @@ pub fn run(starting_path: &str, scan_time: &str, include_barcodes: bool) -> usiz
                 failures.push(path_buffer.to_str().unwrap().to_string());
                 continue;
             }
-
         }
 
         let proper_name = convert_decoded_to_name(decoded_data.as_str());
 
+        // TODO: FIXME: not working right, not registering as existing so everthing is marked as _D
         let specimen_vec = specimen.get_mut(proper_name.as_str());
         match specimen_vec {
             Some(occurrences) => {
@@ -187,7 +220,7 @@ pub fn run(starting_path: &str, scan_time: &str, include_barcodes: bool) -> usiz
 
                 occurrences.push(path_buffer.to_str().unwrap().to_string());
 
-                println!("Data extracted, proper name determined to be: {}\n", full_name);
+                println!("success!\nProper name determined to be: {}\n", full_name);
             },
 
             _ => {
@@ -196,7 +229,7 @@ pub fn run(starting_path: &str, scan_time: &str, include_barcodes: bool) -> usiz
                 edits.insert(path_buffer.to_str().unwrap().to_string(), full_name.clone());
                 specimen.insert(proper_name.as_str().to_string(), vec![path_buffer.to_str().unwrap().to_string()]);
 
-                println!("Data extracted, proper name determined to be: {}\n", full_name);
+                println!("success!\nProper name determined to be: {}\n", full_name);
             }
         };
 
@@ -209,8 +242,8 @@ pub fn run(starting_path: &str, scan_time: &str, include_barcodes: bool) -> usiz
     }
 
     if ret != 0 {
-        println!("There were {} failed attempts at reading datamatrices / barcodes", failures.len());
-        println!("Failure rate: {}", failures.len() / ret);
+        println!("\nThere were {} failed attempts at reading datamatrices / barcodes", failures.len());
+        println!("Failure rate: {}", failures.len() as u32 / ret as u32);
 
     }
 

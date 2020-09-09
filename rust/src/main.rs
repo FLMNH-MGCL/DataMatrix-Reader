@@ -4,6 +4,8 @@ mod lib;
 extern crate zbar_rust;
 extern crate image;
 
+use fancy_regex::Regex;
+
 use zbar_rust::{ZBarConfig, ZBarImageScanner, ZBarSymbolType};
 use std::process::{Command};
 
@@ -66,6 +68,42 @@ fn test_read_dir(path: &str) {
 
 }
 
+fn test_fancy() {
+    let re = Regex::new(r"(.*?)MGCL\s?[0-9]{7,8}").unwrap();
+
+    // TODO: doesn't work for this text
+    let text = "MGCL 1004795
+    44001799004795";
+
+    // let text = "MGCL 1004795";
+
+    // let text = "44001799004795
+    // MGCL 1004795";
+
+    let mut new_name = "";
+
+    // remove anything before 'MGCL'
+    let mut result = re.captures(&text).unwrap();
+
+    match result {
+        Some(info) => {
+            match info.get(0) {
+                Some(group) => {
+                    let decoded_vec = text.split_at(group.start());
+                    println!("{:?}", text.split_at(group.start()));
+                    new_name = decoded_vec.1;
+                },
+                _ => ()
+            }
+        },
+        _ => ()
+    }
+
+    println!("{}", new_name)
+
+    
+}
+
 // fn test_zbar_cli() {
 //     let img_path = "/Users/aaronleopold/Documents/museum/datamatrix/test_images/2d/barcode.JPG";
 //     // let img_path = "/Users/aaronleopold/Documents/museum/datamatrix/test_images/2d/IMG016.jpg";
@@ -109,4 +147,6 @@ pub fn main() {
     // test_read_dir("/Volumes/flmnh/NaturalHistory/Lepidoptera/Kawahara/Digitization/LepNet/PINNED_COLLECTION/IMAGES_PROBLEMS/Catocala_rename_me/MGCL_green_barcodes_manual_rename/2016_10_25_MANUAL_RENAME");
 
     test_dmtx_zbar();
+
+    // test_fancy();
 }
