@@ -5,7 +5,14 @@ extern crate regex;
 extern crate glob;
 
 use glob::glob;
-use regex::Regex;
+// use regex::Regex;
+
+// #[derive(PartialEq, PartialOrd)]
+// pub enum RUN_TYPES {
+//     BOTH,
+//     DATAMATRIX,
+//     BARCODE
+// }
 
 /// Returns a string - the stdout from 'dmtxread' utility, CLI program
 ///
@@ -22,6 +29,25 @@ pub fn dmtxread(path: &str, scan_time: &str) -> String {
         .arg(path)
         .output()
         .expect("dmtxread command failed to start. Please ensure it is installed in your system");
+
+    let mgcl_number = String::from(String::from_utf8_lossy(&output.stdout));
+
+    match mgcl_number.as_str() {
+        "" => return String::default(),
+        _ => return mgcl_number,
+    }
+}
+
+/// Returns a string - the stdout from 'zbarimg' utility, CLI program
+///
+/// # Arguments
+///
+/// * `path` - A str filesystem path, the location of the image to scan
+pub fn zbarimg(path: &str) -> String {
+    let output = Command::new("zbarimg")
+        .arg(path)
+        .output()
+        .expect("zbarimg command failed to start. Please ensure it is installed in your system");
 
     let mgcl_number = String::from(String::from_utf8_lossy(&output.stdout));
 
@@ -70,17 +96,48 @@ fn convert_decoded_to_name(decoded_data: &str) -> String {
     // let re = Regex::new(r"").unwrap();
     // let result = re.replace_all("Hello World!", "x");
 
-    let result = decoded_data.replace(" ", "_");
+    let result = decoded_data.replace(" ", "_").replace("CODE-128:", "");
 
     result
+}
+
+/// Ensure the libraries / CLI utilities are installed on the system, will panic on failure
+fn check_installations() {
+
+    Command::new("dmtxread")
+        .arg("--help")
+        .output()
+        .expect("dmtxread command failed to start. Please ensure dmtx-utils are installed in your system");
+
+    Command::new("zbarimg")
+        .arg("--help")
+        .output()
+        .expect("zbarimg command failed to start. Please ensure zbar is installed in your system");
+
+    // TEST FAILURE
+    // let test = Command::new("zbafdaffdafrimg")
+    //     .arg("--help")
+    //     .output()
+    //     .expect("zbafdaffdafrimg command failed to start. Please ensure it is installed in your system");
 }
 
 
 
 // todo: remove return
-pub fn run(starting_path: &str) -> usize {
-    let mut specimen = HashMap::<String, std::vec::Vec<String>>::new();
-    let mut edits = HashMap::<String, String>::new();
+/// Decoded datamatrices and barcodes at and below given OS path starting point
+///
+/// # Arguments
+///
+/// * `starting_path` - A str filesystem path, the location to start at
+/// * `scane_time` - A str representing the maximum time in ms to search for a datamatrix
+/// * `include_barcodes` - A bool that will include barcode (zbar) attempts on failed dmtx decodes
+pub fn run(starting_path: &str, scan_time: &str, include_barcodes: bool) -> usize {
+    println!("Checking installations of dmtx-utils and zbar...");
+    check_installations();
+    
+    let mut specimen: HashMap::<String, std::vec::Vec<String>> = HashMap::new();
+    let mut edits: HashMap::<String, String> = HashMap::new();
+    let mut failures: Vec<String> = Vec::new();
 
     let files = collect(starting_path);
     let ret = files.len();
@@ -88,13 +145,29 @@ pub fn run(starting_path: &str) -> usize {
     // println!("{:?}", files);
 
     for path_buffer in files {
-        println!("Attempting to extract data from {}...", path_buffer.to_str().unwrap());
+        println!("Attempting to extract datamatrix data from {}...", path_buffer.to_str().unwrap());
 
-        let decoded_data = dmtxread(path_buffer.to_str().unwrap(), "30000");
+        let mut decoded_data = dmtxread(path_buffer.to_str().unwrap(), scan_time);
 
         if decoded_data == "" {
             println!("No datamatrix data could be extracted for {}\n", path_buffer.to_str().unwrap());
-            continue;
+
+            if include_barcodes {
+                println!("Attempting to extract barcode data from {}...", path_buffer.to_str().unwrap());
+
+                decoded_data = zbarimg(path_buffer.to_str().unwrap());
+
+                if decoded_data == "" {
+                    println!("No barcode data could be extracted for {}\n", path_buffer.to_str().unwrap());
+                    failures.push(path_buffer.to_str().unwrap().to_string());
+
+                    continue;
+                }
+            } else {
+                failures.push(path_buffer.to_str().unwrap().to_string());
+                continue;
+            }
+
         }
 
         let proper_name = convert_decoded_to_name(decoded_data.as_str());
@@ -133,6 +206,12 @@ pub fn run(starting_path: &str) -> usize {
     
     for (old,new) in edits {
         println!("{} : {}", old, new);
+    }
+
+    if ret != 0 {
+        println!("There were {} failed attempts at reading datamatrices / barcodes", failures.len());
+        println!("Failure rate: {}", failures.len() / ret);
+
     }
 
     ret
