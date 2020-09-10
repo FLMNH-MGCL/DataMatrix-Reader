@@ -3,132 +3,47 @@ mod lib;
 
 extern crate zbar_rust;
 extern crate image;
+extern crate clap;
 
-use fancy_regex::Regex;
+use clap::{Arg, App};
 
-use zbar_rust::{ZBarConfig, ZBarImageScanner, ZBarSymbolType};
-use std::process::{Command};
+use std::time::Instant;  
 
-use image::GenericImageView;
-use std::time::Instant;
+pub fn main() {
+    let matches = App::new("Datamatrix Scanner")
+        .version("1.0")
+        .author("Aaron Leopold <aaronleopold1221@gmail.com>")
+        .about("Decodes datamatrices and code128 barcodes from specimen images")
+        .arg(Arg::with_name("start_dir")
+            .short("d")
+            .long("start_dir")
+            .value_name("DIR")
+            .help("Sets the starting path")
+            .required(true)
+            .takes_value(true))
+        .arg(Arg::with_name("scan_time")
+            .short("s")
+            .long("scan_time")
+            .value_name("TIME (in ms)")
+            .help("Sets the time to scan for a datamatrix")
+            .required(true)
+            .takes_value(true))
+        .arg(Arg::with_name("barcode")
+            .short("b")
+            .long("barcode")
+            .help("Sets the program to search for code128 on datamatrix failed reads")
+            .required(false)
+            .takes_value(false))
+        .get_matches();
 
+    let starting_path = matches.value_of("start_dir").unwrap();
+    let scan_time = matches.value_of("scan_time").unwrap();
+    let include_barcodes = matches.is_present("barcode");
 
-fn test_zbar_lib() {
-
-    let img = image::open("/Users/aaronleopold/Documents/museum/datamatrix/test_images/2d/barcode.JPG").unwrap();
-
-    let (width, height) = img.dimensions();
-    
-    // let luma_img = img.to_luma();
-    
-    let img_data: Vec<u8> = img.to_bytes();
-    // let img_data: Vec<u8> = luma_img.to_vec();
-    
-    let mut scanner = ZBarImageScanner::new();
-    // scanner.set_config(ZBarSymbolType::ZBarCode128, ZBarConfig::ZBarCfgEnable, 1).unwrap();
-    
-    // let results = scanner.scan(&luma_img_data, width, height).unwrap();
-
-    println!("{} - {}", width, height);
-
-    
-    let results = scanner.scan(&img_data, width, height, ZBarSymbolType::ZBarCode128 as u32);
-
-    println!("DONE");
-
-
-
-    println!("{:?}", results);
-
-    
-    for result in results {
-        // println!("{}", String::from_utf8(result.data).unwrap())
-        println!("{:?}", result)
-    }
-}
-
-fn test_read_dir(path: &str) {
-    let output = Command::new("ls")
-        .arg(path)
-        .output()
-        .expect("ls command failed to start.");
-
-    let listed_dir = String::from(String::from_utf8_lossy(&output.stdout));
-
-    let result = match listed_dir.as_str() {
-        "" => String::default(),
-        _ => listed_dir,
-    };
-
-    if result == "" {
-        println!("Recieved nothing....")
-    } else {
-        println!("{}", result)
-    }
-
-}
-
-fn test_fancy() {
-    let re = Regex::new(r"(.*?)MGCL\s?[0-9]{7,8}").unwrap();
-
-    // TODO: doesn't work for this text
-    let text = "MGCL 1004795
-    44001799004795";
-
-    // let text = "MGCL 1004795";
-
-    // let text = "44001799004795
-    // MGCL 1004795";
-
-    let mut new_name = "";
-
-    // remove anything before 'MGCL'
-    let mut result = re.captures(&text).unwrap();
-
-    match result {
-        Some(info) => {
-            match info.get(0) {
-                Some(group) => {
-                    let decoded_vec = text.split_at(group.start());
-                    println!("{:?}", text.split_at(group.start()));
-                    new_name = decoded_vec.1;
-                },
-                _ => ()
-            }
-        },
-        _ => ()
-    }
-
-    println!("{}", new_name)
-
-    
-}
-
-// fn test_zbar_cli() {
-//     let img_path = "/Users/aaronleopold/Documents/museum/datamatrix/test_images/2d/barcode.JPG";
-//     // let img_path = "/Users/aaronleopold/Documents/museum/datamatrix/test_images/2d/IMG016.jpg";
-
-//     let decoded = lib::zbarimg(img_path);
-
-//     println!("{}", decoded)
-// }
-
-// fn test_dmtx_only() {
-//     let start = Instant::now();
-//     let num_files = lib::run("/Users/aaronleopold/Documents/museum/datamatrix/test_images", "30000",false);
-//     let end = start.elapsed();
-
-//     println!("\nCompleted... {} files handled in {:?}.", num_files, end);
-//     if num_files != 0 {
-//         println!("Average time per image: {:?}", end / num_files as u32);
-//     }
-// }
-
-fn test_dmtx_zbar() {
     let start = Instant::now();
     // I am setting scan_time to 1 ms because I know there are no datamatrices here and right now it can only be run
     // including dmtxread
-    let num_files = lib::run("/Volumes/flmnh/NaturalHistory/Lepidoptera/Kawahara/Digitization/LepNet/PINNED_COLLECTION/IMAGES_PROBLEMS/Catocala_rename_me/MGCL_green_barcodes_manual_rename/2016_10_25_MANUAL_RENAME", "1", true);
+    let num_files = lib::run(starting_path, scan_time, include_barcodes);
     let end = start.elapsed();
 
     println!("\nCompleted... {} files handled in {:?}.", num_files, end);
@@ -138,15 +53,8 @@ fn test_dmtx_zbar() {
     }
 }
 
+// TESTS
+// cargo run --release -- --scan_time 30000 --start_dir /Volumes/flmnh/NaturalHistory/Lepidoptera/Kawahara/Digitization/LepNet/PINNED_COLLECTION/IMAGES_PROBLEMS/Catocala_rename_me/MGCL_green_barcodes_manual_rename/2016_10_25_MANUAL_RENAME --barcode
+// cargo run --release -- --scan_time 30000 --start_dir /Volumes/flmnh/NaturalHistory/Lepidoptera/Kawahara/Digitization/LepNet/PINNED_COLLECTION/IMAGES_PROBLEMS/Catocala_rename_me/MGCL_green_barcodes_manual_rename/RAW_2016_10_10 --barcode
+// cargo run --release -- --scan_time 30000 --start_dir /Volumes/flmnh/NaturalHistory/Lepidoptera/Kawahara/Digitization/LepNet/PINNED_COLLECTION/IMAGES_UPLOADED/IMAGES_UPLOADED_NAMED/EREBIDAE/Catocala/2019_07_10/2019_07_10_LOW-RES
 
-pub fn main() {
-    // test_dmtx_only();
-
-    // test_zbar_cli();
-
-    // test_read_dir("/Volumes/flmnh/NaturalHistory/Lepidoptera/Kawahara/Digitization/LepNet/PINNED_COLLECTION/IMAGES_PROBLEMS/Catocala_rename_me/MGCL_green_barcodes_manual_rename/2016_10_25_MANUAL_RENAME");
-
-    test_dmtx_zbar();
-
-    // test_fancy();
-}

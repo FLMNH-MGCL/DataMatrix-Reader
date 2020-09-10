@@ -3,20 +3,92 @@ use std::collections::HashMap;
 use std::time::Instant;
 use std::io;
 use std::io::prelude::*; 
+use std::path::Path;
 
 extern crate regex;
 extern crate glob;
 
 use glob::glob;
-// use regex::Regex;
 use fancy_regex::Regex;
 
-// #[derive(PartialEq, PartialOrd)]
-// pub enum RUN_TYPES {
-//     BOTH,
-//     DATAMATRIX,
-//     BARCODE
-// }
+/// Ensure the passed in path is valid (exists and is a directory), will exit with code 1 on invalid
+fn path_exists(path: &str) {
+    print!("Checking the existence of passed in path...");
+    io::stdout().flush().unwrap();
+    let path_obj = Path::new(path);
+
+    if !path_obj.exists() || !path_obj.is_dir() {
+        println!("failed! The starting directory either doesn't exist in the filesystem or is not a directory: {}", path);
+        println!("The program will now exit...");
+        std::process::exit(1);
+    } else {
+        println!("passed!")
+    }
+}
+
+/// Ensure the libraries / CLI utilities are installed on the system, will panic on failure
+fn check_installations() {
+    print!("Checking installations of dmtx-utils and zbar...");
+    io::stdout().flush().unwrap();
+
+    Command::new("dmtxread")
+        .arg("--help")
+        .output()
+        .expect("dmtxread command failed to start. Please ensure dmtx-utils are installed in your system");
+
+    Command::new("zbarimg")
+        .arg("--help")
+        .output()
+        .expect("zbarimg command failed to start. Please ensure zbar is installed in your system");
+
+    println!("passed!");
+}
+
+/// Returns nothing - checks installation of required libraries and the validity of
+/// the passed in path argument
+///
+/// # Arguments
+///
+/// * `path` - A str filesystem path, the starting directory to scan images
+fn sanity_checks(path: &str) {
+    check_installations();
+    path_exists(path);
+}
+
+/// Returns a string - the standardized name generated from the decoded data
+///
+/// # Arguments
+///
+/// * `decoded_data` - A str from the decoding process of either dmtxread or zbarimg
+fn convert_decoded_to_name(decoded_data: &str) -> String {
+    let re = Regex::new(r"(.*?)MGCL\s?[0-9]{7,8}").unwrap();
+
+    let regex_ret = re.captures(&decoded_data).unwrap();
+
+    let mut result = "";
+
+    match regex_ret {
+        Some(captures) => {
+            match captures.get(0) {
+                Some(group) => {
+                    let decoded_vec = decoded_data.split_at(group.start());
+                    // println!("{:?}", text.split_at(group.start()));
+                    result = decoded_vec.1;
+                },
+                _ => ()
+            }
+        },
+        _ => ()
+    }
+
+    // remove trailing, leading whitespace, 
+    // newlines, replace spaces with _ and remove instances of CODE-128
+    result
+        .trim()
+        .replace("\n", "")
+        .replace(" ", "_")
+        .replace("CODE-128:", "").to_string()
+}
 
 /// Returns a string - the stdout from 'dmtxread' utility, CLI program
 ///
@@ -73,10 +145,10 @@ pub fn collect(starting_path: &str) -> Vec<std::path::PathBuf>{
 
     let start = Instant::now();
 
-    let pattern_JPG = format!("{}/**/*.JPG", starting_path);
+    let pattern_jpg_cap = format!("{}/**/*.JPG", starting_path);
     let pattern_jpg = format!("{}/**/*.jpg", starting_path);
 
-    let  files_raw: Result<Vec<_>, _>  = glob(pattern_JPG.as_str())
+    let  files_raw: Result<Vec<_>, _>  = glob(pattern_jpg_cap.as_str())
         .unwrap()
         .chain(glob(pattern_jpg.as_str()).unwrap())
         .collect();
@@ -104,56 +176,6 @@ pub fn collect(starting_path: &str) -> Vec<std::path::PathBuf>{
     files
 }
 
-fn convert_decoded_to_name(decoded_data: &str) -> String {
-    let re = Regex::new(r"(.*?)MGCL\s?[0-9]{7,8}").unwrap();
-
-    let mut regex_ret = re.captures(&decoded_data).unwrap();
-
-    let mut result = "";
-
-    match regex_ret {
-        Some(captures) => {
-            match captures.get(0) {
-                Some(group) => {
-                    let decoded_vec = decoded_data.split_at(group.start());
-                    // println!("{:?}", text.split_at(group.start()));
-                    result = decoded_vec.1;
-                },
-                _ => ()
-            }
-        },
-        _ => ()
-    }
-
-    // remove trailing, leading whitespace, 
-    // newlines, replace spaces with _ and remove instances of CODE-128
-    result
-        .trim()
-        .replace("\n", "")
-        .replace(" ", "_")
-        .replace("CODE-128:", "").to_string()
-}
-
-/// Ensure the libraries / CLI utilities are installed on the system, will panic on failure
-fn check_installations() {
-    print!("Checking installations of dmtx-utils and zbar...");
-    io::stdout().flush().unwrap();
-
-    Command::new("dmtxread")
-        .arg("--help")
-        .output()
-        .expect("dmtxread command failed to start. Please ensure dmtx-utils are installed in your system");
-
-    Command::new("zbarimg")
-        .arg("--help")
-        .output()
-        .expect("zbarimg command failed to start. Please ensure zbar is installed in your system");
-
-    println!("passed!");
-}
-
-
-
 // todo: remove return - maybe?
 /// Decoded datamatrices and barcodes at and below given OS path starting point
 ///
@@ -163,7 +185,7 @@ fn check_installations() {
 /// * `scane_time` - A str representing the maximum time in ms to search for a datamatrix
 /// * `include_barcodes` - A bool that will include barcode (zbar) attempts on failed dmtx decodes
 pub fn run(starting_path: &str, scan_time: &str, include_barcodes: bool) -> usize {
-    check_installations();
+    sanity_checks(starting_path);
     
     let mut specimen: HashMap::<String, std::vec::Vec<String>> = HashMap::new();
     let mut edits: HashMap::<String, String> = HashMap::new();
@@ -204,13 +226,10 @@ pub fn run(starting_path: &str, scan_time: &str, include_barcodes: bool) -> usiz
 
         let proper_name = convert_decoded_to_name(decoded_data.as_str());
 
-        // TODO: FIXME: not working right, not registering as existing so everthing is marked as _D
-        let specimen_vec = specimen.get_mut(proper_name.as_str());
-        match specimen_vec {
-            Some(occurrences) => {
+        specimen.entry(proper_name.clone())
+            .and_modify(|occurrences| {
                 let suffix = match occurrences.len() {
-                    1 => "_D",
-                    2 => "_V",
+                    1 => "_V",
                     _ => "_MANUAL"
                 };
 
@@ -218,21 +237,21 @@ pub fn run(starting_path: &str, scan_time: &str, include_barcodes: bool) -> usiz
 
                 edits.insert(path_buffer.to_str().unwrap().to_string(), full_name.clone());
 
-                occurrences.push(path_buffer.to_str().unwrap().to_string());
-
                 println!("success!\nProper name determined to be: {}\n", full_name);
-            },
 
-            _ => {
+                occurrences.push(path_buffer.to_str().unwrap().to_string())
+
+            })
+            .or_insert_with(|| {
                 let full_name = format!("{}{}.{}", proper_name.clone(), "_D", path_buffer.extension().unwrap().to_str().unwrap());
 
                 edits.insert(path_buffer.to_str().unwrap().to_string(), full_name.clone());
-                specimen.insert(proper_name.as_str().to_string(), vec![path_buffer.to_str().unwrap().to_string()]);
+                // specimen.insert(proper_name.as_str().to_string(), vec![path_buffer.to_str().unwrap().to_string()]);
 
                 println!("success!\nProper name determined to be: {}\n", full_name);
-            }
-        };
 
+                vec![path_buffer.to_str().unwrap().to_string()]
+            });
     }
 
     println!("All computations completed... Now printing old file paths and their corresponding renames: ");
@@ -254,15 +273,6 @@ pub fn run(starting_path: &str, scan_time: &str, include_barcodes: bool) -> usiz
 #[cfg(test)]
 mod tests {
     use super::*;
-    // #[test]
-    // fn test_collect() {
-    //     collect("/Users/aaronleopold/Documents/museum/datamatrix/test_images")
-    // }
-
-    // #[test]
-    // fn test_run() {
-    //     run("/Users/aaronleopold/Documents/museum/datamatrix/test_images")
-    // }
 
     #[test]
     fn test_pass() {
