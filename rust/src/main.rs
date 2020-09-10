@@ -41,9 +41,9 @@ pub fn main() {
     let include_barcodes = matches.is_present("barcode");
 
     let start = Instant::now();
-    // I am setting scan_time to 1 ms because I know there are no datamatrices here and right now it can only be run
-    // including dmtxread
+
     let num_files = lib::run(starting_path, scan_time, include_barcodes);
+    
     let end = start.elapsed();
 
     println!("\nCompleted... {} files handled in {:?}.", num_files, end);
