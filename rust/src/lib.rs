@@ -2,6 +2,9 @@ use std::process::{Command};
 use std::collections::HashMap;
 use std::time::Instant;
 use std::path::Path;
+// use std::io;
+// use std::io::prelude::*;   
+use chrono::{Datelike, Timelike, Utc};
 
 extern crate regex;
 extern crate glob;
@@ -32,10 +35,14 @@ fn check_installations() {
         .output()
         .expect("dmtxread command failed to start. Please ensure dmtx-utils are installed in your system");
 
+    // io::stdout().flush().ok().expect("Could not flush stdout");
+
     Command::new("zbarimg")
         .arg("--help")
         .output()
         .expect("zbarimg command failed to start. Please ensure zbar is installed in your system");
+
+    // io::stdout().flush().ok().expect("Could not flush stdout");
 
     println!("passed!");
 }
@@ -176,7 +183,7 @@ pub fn collect(starting_path: &str) -> Vec<std::path::PathBuf>{
 ///
 /// * `old_path` - A String filesystem path, the location of the image
 /// * `new_name` - A String of the standardized new name for the image
-fn rename(old_path: String, new_name: String) {
+fn rename(old_path: String, new_name: String) -> (String, String) {
     let raw_path = Path::new(old_path.as_str());
     let parent = raw_path.parent();
 
@@ -185,7 +192,10 @@ fn rename(old_path: String, new_name: String) {
     // std::fs::rename(old_path.as_str(), new_path);
 
     println!("Old Path: {}\nNew Path: {}\n", old_path, new_path);
+
+    (old_path, new_path)
 }
+
 
 /// Decode datamatrices and barcodes at and below given OS path starting point
 ///
@@ -268,11 +278,32 @@ pub fn run(starting_path: &str, scan_time: &str, include_barcodes: bool) -> usiz
 
     println!("All computations completed...\n");
 
-    println!("Initiating renaming procedure (old vs new paths will be displayed as they are renamed)...\n");
-    
+    println!("Initiating renaming procedure...");
+
+    let now = Utc::now();
+    let (_, year) = now.year_ce();
+
+    let timestamp = format!("{}_{}_{}-{}:{}", year, now.month(), now.day(), now.hour(), now.minute());
+
+    let parent_path = Path::new(starting_path).parent();
+    let log_path = parent_path.unwrap().join(format!("DATA_MATRIX_LOG_{}.csv", timestamp));
+
+
+    let mut wtr = csv::Writer::from_path(log_path.clone()).unwrap();
+    wtr.write_record(&["Old Path", "New Path"]).expect("Uh oh, something went wrong with the CSV writing...");
+
     for (old,new) in edits {
-        rename(old.clone(), new.clone());
+        let (old_path, new_path) = rename(old.clone(), new.clone());
+
+        wtr.write_record(&[old_path, new_path]).expect("Uh oh, something went wrong with the CSV writing...");
     }
+
+    wtr.flush().expect("Uh oh, something went wrong with the CSV writing...");
+
+    println!("done!");
+
+    println!("\nLog file can be found here: {}", log_path.as_os_str().to_str().unwrap());
+
 
     if ret != 0 {
         println!("\nThere were {} failed attempts at reading datamatrices / barcodes", failures.len());
