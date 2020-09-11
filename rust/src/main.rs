@@ -37,7 +37,6 @@ fn interpret_arg(argument: String) -> Option<Vec<String>> {
 
     if allowed_args.iter().any(|&i| i == arg_vec[0]) {
         if arg_vec[0] != "--barcode" && arg_vec.len() != 2 {
-            // INVALID
             return None;
         }
 

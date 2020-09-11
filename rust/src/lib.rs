@@ -1,8 +1,6 @@
 use std::process::{Command};
 use std::collections::HashMap;
 use std::time::Instant;
-// use std::io;
-// use std::io::prelude::*; 
 use std::path::Path;
 
 extern crate regex;
@@ -14,7 +12,6 @@ use fancy_regex::Regex;
 /// Ensure the passed in path is valid (exists and is a directory), will exit with code 1 on invalid
 fn path_exists(path: &str) {
     println!("Checking the existence of passed in path...");
-    // io::stdout().flush().unwrap();
     let path_obj = Path::new(path);
 
     if !path_obj.exists() || !path_obj.is_dir() {
@@ -29,7 +26,6 @@ fn path_exists(path: &str) {
 /// Ensure the libraries / CLI utilities are installed on the system, will panic on failure
 fn check_installations() {
     println!("Checking installations of dmtx-utils and zbar...");
-    // io::stdout().flush().unwrap();
 
     Command::new("dmtxread")
         .arg("--help")
@@ -140,8 +136,6 @@ pub fn zbarimg(path: &str) -> String {
 /// * `starting_path` - A str filesystem path, the location to start at
 pub fn collect(starting_path: &str) -> Vec<std::path::PathBuf>{
     println!("Collecting files...");
-    // io::stdout().flush().unwrap();
-
 
     let start = Instant::now();
 
@@ -176,14 +170,32 @@ pub fn collect(starting_path: &str) -> Vec<std::path::PathBuf>{
     files
 }
 
-// todo: remove return - maybe?
-/// Decoded datamatrices and barcodes at and below given OS path starting point
+/// Rename file to standardized name recieved from decoding datamatrix data
+///
+/// # Arguments
+///
+/// * `old_path` - A String filesystem path, the location of the image
+/// * `new_name` - A String of the standardized new name for the image
+fn rename(old_path: String, new_name: String) {
+    let raw_path = Path::new(old_path.as_str());
+    let parent = raw_path.parent();
+
+    let new_path = parent.unwrap().join(new_name).to_str().unwrap().to_string();
+
+    // std::fs::rename(old_path.as_str(), new_path);
+
+    println!("Old Path: {}\nNew Path: {}\n", old_path, new_path);
+}
+
+/// Decode datamatrices and barcodes at and below given OS path starting point
 ///
 /// # Arguments
 ///
 /// * `starting_path` - A str filesystem path, the location to start at
 /// * `scane_time` - A str representing the maximum time in ms to search for a datamatrix
 /// * `include_barcodes` - A bool that will include barcode (zbar) attempts on failed dmtx decodes
+/// 
+/// # Returns usize - number of files handled
 pub fn run(starting_path: &str, scan_time: &str, include_barcodes: bool) -> usize {
     sanity_checks(starting_path);
     
@@ -198,7 +210,7 @@ pub fn run(starting_path: &str, scan_time: &str, include_barcodes: bool) -> usiz
 
     for path_buffer in files {
         println!("Attempting to extract datamatrix data from {}...", path_buffer.to_str().unwrap());
-        // io::stdout().flush().unwrap();
+
 
         let mut decoded_data = dmtxread(path_buffer.to_str().unwrap(), scan_time);
 
@@ -207,7 +219,7 @@ pub fn run(starting_path: &str, scan_time: &str, include_barcodes: bool) -> usiz
 
             if include_barcodes {
                 println!("Attempting to extract barcode data from {}...", path_buffer.to_str().unwrap());
-                // io::stdout().flush().unwrap();
+        
 
 
                 decoded_data = zbarimg(path_buffer.to_str().unwrap());
@@ -254,16 +266,17 @@ pub fn run(starting_path: &str, scan_time: &str, include_barcodes: bool) -> usiz
             });
     }
 
-    println!("All computations completed... Now printing old file paths and their corresponding renames: ");
+    println!("All computations completed...\n");
+
+    println!("Initiating renaming procedure (old vs new paths will be displayed as they are renamed)...\n");
     
     for (old,new) in edits {
-        println!("{} : {}", old, new);
+        rename(old.clone(), new.clone());
     }
 
     if ret != 0 {
         println!("\nThere were {} failed attempts at reading datamatrices / barcodes", failures.len());
         println!("Failure rate: {}", failures.len() as u32 / ret as u32);
-
     }
 
     ret
