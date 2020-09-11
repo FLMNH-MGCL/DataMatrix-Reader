@@ -3,46 +3,108 @@ mod lib;
 
 extern crate zbar_rust;
 extern crate image;
-extern crate clap;
 
-use clap::{Arg, App};
+use std::time::Instant; 
+use std::env::args;
 
-use std::time::Instant;  
+
+
+fn display_help() {
+    let help = "
+Aaron Leopold <aaronleopold1221@gmail.com>
+datamatrix scanner 1.0.0   
+
+USAGE:
+    cargo run --release -- [OPTIONS] [FLAGS]
+    /path/to/binary [OPTIONS] [FLAGS]
+
+FLAGS:
+    -h, --help                  Prints help information
+
+OPTIONS:
+    --start_dir <DIR>           The directory to start searching for and decoding datamatrices    
+    --scan_time <TIME (in ms)>  The maximum time allowed to attempt decoding one datamatrix    
+    --barcode                   If present, will search for and decode CODE-128 barcodes    
+    ";
+
+    println!("{}", help);
+}
+
+fn interpret_arg(argument: String) -> Option<Vec<String>> {
+    let allowed_args = ["--start_dir", "--scan_time", "--barcode"];
+
+    let arg_vec: Vec<String> = argument.split(" ").into_iter().map(|s| String::from(s)).collect();
+
+    if allowed_args.iter().any(|&i| i == arg_vec[0]) {
+        if arg_vec[0] != "--barcode" && arg_vec.len() != 2 {
+            // INVALID
+            return None;
+        }
+
+        return Some(arg_vec);
+    }
+
+    None
+}
+
 
 pub fn main() {
-    let matches = App::new("Datamatrix Scanner")
-        .version("1.0")
-        .author("Aaron Leopold <aaronleopold1221@gmail.com>")
-        .about("Decodes datamatrices and code128 barcodes from specimen images")
-        .arg(Arg::with_name("start_dir")
-            .short("d")
-            .long("start_dir")
-            .value_name("DIR")
-            .help("Sets the starting path")
-            .required(true)
-            .takes_value(true))
-        .arg(Arg::with_name("scan_time")
-            .short("s")
-            .long("scan_time")
-            .value_name("TIME (in ms)")
-            .help("Sets the time to scan for a datamatrix")
-            .required(true)
-            .takes_value(true))
-        .arg(Arg::with_name("barcode")
-            .short("b")
-            .long("barcode")
-            .help("Sets the program to search for code128 on datamatrix failed reads")
-            .required(false)
-            .takes_value(false))
-        .get_matches();
+    // clap argument parser broke the STDOUT collection for flow, so I had to implement 
+    // my own argument handling.
+    let arguments: Vec<String> = args().collect();
 
-    let starting_path = matches.value_of("start_dir").unwrap();
-    let scan_time = matches.value_of("scan_time").unwrap();
-    let include_barcodes = matches.is_present("barcode");
+    let mut barcode = false;
+    let mut starting_path = String::default();
+    let mut scan_time = String::default();
+
+    if arguments.len() < 2 {
+        println!("No arguments detected... Please run with the --help flag to see usage");
+        std::process::exit(1);
+    }
+
+    // check if help is present
+    if arguments.iter().any(|i| i.as_str() == "--help") {
+        display_help();
+        std::process::exit(0);
+    }
+
+    for (index, argument) in arguments.iter().enumerate() {
+        if index == 0 {
+            continue;
+        }
+
+        match interpret_arg(argument.clone()) {
+            Some(arg_vec) => {
+                let arg_flag = arg_vec[0].clone();
+
+                match arg_flag.clone().as_str() {
+                    "--start_dir" => {
+                        let arg_value = arg_vec[1].clone();
+                        starting_path = arg_value;
+                    },
+                    "--scan_time" => {
+                        let arg_value = arg_vec[1].clone();
+                        scan_time = arg_value;
+                    },
+                    "--barcode" => {
+                        barcode = true;
+                    },
+                    _ => {
+                        println!("Invalid usage, please run with the --help flag");
+                        std::process::exit(1);
+                    }
+                }
+            },
+            None => {
+                println!("Invalid usage, please run with the --help flag");
+                std::process::exit(1);
+            }
+        }
+    }
 
     let start = Instant::now();
 
-    let num_files = lib::run(starting_path, scan_time, include_barcodes);
+    let num_files = lib::run(starting_path.as_str(), scan_time.as_str(), barcode);
     
     let end = start.elapsed();
 

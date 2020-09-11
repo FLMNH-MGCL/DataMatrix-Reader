@@ -1,8 +1,8 @@
 use std::process::{Command};
 use std::collections::HashMap;
 use std::time::Instant;
-use std::io;
-use std::io::prelude::*; 
+// use std::io;
+// use std::io::prelude::*; 
 use std::path::Path;
 
 extern crate regex;
@@ -13,8 +13,8 @@ use fancy_regex::Regex;
 
 /// Ensure the passed in path is valid (exists and is a directory), will exit with code 1 on invalid
 fn path_exists(path: &str) {
-    print!("Checking the existence of passed in path...");
-    io::stdout().flush().unwrap();
+    println!("Checking the existence of passed in path...");
+    // io::stdout().flush().unwrap();
     let path_obj = Path::new(path);
 
     if !path_obj.exists() || !path_obj.is_dir() {
@@ -28,8 +28,8 @@ fn path_exists(path: &str) {
 
 /// Ensure the libraries / CLI utilities are installed on the system, will panic on failure
 fn check_installations() {
-    print!("Checking installations of dmtx-utils and zbar...");
-    io::stdout().flush().unwrap();
+    println!("Checking installations of dmtx-utils and zbar...");
+    // io::stdout().flush().unwrap();
 
     Command::new("dmtxread")
         .arg("--help")
@@ -139,8 +139,8 @@ pub fn zbarimg(path: &str) -> String {
 ///
 /// * `starting_path` - A str filesystem path, the location to start at
 pub fn collect(starting_path: &str) -> Vec<std::path::PathBuf>{
-    print!("Collecting files...");
-    io::stdout().flush().unwrap();
+    println!("Collecting files...");
+    // io::stdout().flush().unwrap();
 
 
     let start = Instant::now();
@@ -197,8 +197,8 @@ pub fn run(starting_path: &str, scan_time: &str, include_barcodes: bool) -> usiz
     // println!("{:?}", files);
 
     for path_buffer in files {
-        print!("Attempting to extract datamatrix data from {}...", path_buffer.to_str().unwrap());
-        io::stdout().flush().unwrap();
+        println!("Attempting to extract datamatrix data from {}...", path_buffer.to_str().unwrap());
+        // io::stdout().flush().unwrap();
 
         let mut decoded_data = dmtxread(path_buffer.to_str().unwrap(), scan_time);
 
@@ -206,8 +206,8 @@ pub fn run(starting_path: &str, scan_time: &str, include_barcodes: bool) -> usiz
             println!("failed! (no datamatrix data could be extracted)\n");
 
             if include_barcodes {
-                print!("Attempting to extract barcode data from {}...", path_buffer.to_str().unwrap());
-                io::stdout().flush().unwrap();
+                println!("Attempting to extract barcode data from {}...", path_buffer.to_str().unwrap());
+                // io::stdout().flush().unwrap();
 
 
                 decoded_data = zbarimg(path_buffer.to_str().unwrap());
