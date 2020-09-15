@@ -42,8 +42,6 @@ pub fn main() {
     let scan_time = matches.value_of("scan_time").unwrap();
     let include_barcodes = matches.is_present("barcode");   
 
-    println!("{} {} {}", starting_path, scan_time, include_barcodes);
-
     let start = Instant::now();
 
     let num_files = lib::run(starting_path, scan_time, include_barcodes);
@@ -56,9 +54,4 @@ pub fn main() {
         println!("Average time per image: {:?}", end / num_files as u32);
     }
 }
-
-// TESTS
-// cargo run --release -- --scan_time 30000 --start_dir /Volumes/flmnh/NaturalHistory/Lepidoptera/Kawahara/Digitization/LepNet/PINNED_COLLECTION/IMAGES_PROBLEMS/Catocala_rename_me/MGCL_green_barcodes_manual_rename/2016_10_25_MANUAL_RENAME --barcode
-// cargo run --release -- --scan_time 30000 --start_dir /Volumes/flmnh/NaturalHistory/Lepidoptera/Kawahara/Digitization/LepNet/PINNED_COLLECTION/IMAGES_PROBLEMS/Catocala_rename_me/MGCL_green_barcodes_manual_rename/RAW_2016_10_10 --barcode
-// cargo run --release -- --scan_time 30000 --start_dir /Volumes/flmnh/NaturalHistory/Lepidoptera/Kawahara/Digitization/LepNet/PINNED_COLLECTION/IMAGES_UPLOADED/IMAGES_UPLOADED_NAMED/EREBIDAE/Catocala/2019_07_10/2019_07_10_LOW-RES
 
