@@ -2,8 +2,7 @@ use std::process::{Command};
 use std::collections::HashMap;
 use std::time::Instant;
 use std::path::Path;
-// use std::io;
-// use std::io::prelude::*;   
+ 
 use chrono::{Datelike, Timelike, Utc};
 
 extern crate regex;
@@ -111,6 +110,8 @@ pub fn dmtxread(path: &str, scan_time: &str) -> String {
 
     let mgcl_number = String::from(String::from_utf8_lossy(&output.stdout));
 
+    println!("Raw extracted data: {}", mgcl_number.clone());
+
     match mgcl_number.as_str() {
         "" => return String::default(),
         _ => return mgcl_number,
@@ -216,8 +217,6 @@ pub fn run(starting_path: &str, scan_time: &str, include_barcodes: bool) -> usiz
     let files = collect(starting_path);
     let ret = files.len();
 
-    // println!("{:?}", files);
-
     for path_buffer in files {
         println!("Attempting to extract datamatrix data from {}...", path_buffer.to_str().unwrap());
 
@@ -268,7 +267,6 @@ pub fn run(starting_path: &str, scan_time: &str, include_barcodes: bool) -> usiz
                 let full_name = format!("{}{}.{}", proper_name.clone(), "_D", path_buffer.extension().unwrap().to_str().unwrap());
 
                 edits.insert(path_buffer.to_str().unwrap().to_string(), full_name.clone());
-                // specimen.insert(proper_name.as_str().to_string(), vec![path_buffer.to_str().unwrap().to_string()]);
 
                 println!("success!\nProper name determined to be: {}\n", full_name);
 
