@@ -4,3 +4,4 @@ test_images
 *.jpg
 target
 Cargo.lock
+.vscode
