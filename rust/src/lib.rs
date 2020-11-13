@@ -5,7 +5,6 @@ use std::path::Path;
  
 use chrono::{Datelike, Timelike, Utc};
 
-extern crate regex;
 extern crate glob;
 
 use glob::glob;
@@ -142,7 +141,7 @@ pub fn zbarimg(path: &str) -> String {
 /// # Arguments
 ///
 /// * `starting_path` - A str filesystem path, the location to start at
-pub fn collect(starting_path: &str) -> Vec<std::path::PathBuf>{
+pub fn collect(starting_path: &str) -> Vec<std::path::PathBuf> {
     println!("Collecting files...");
 
     let start = Instant::now();

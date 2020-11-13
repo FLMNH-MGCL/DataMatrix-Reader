@@ -1,16 +1,12 @@
 
 mod lib;
-
 extern crate zbar_rust;
 extern crate image;
-
 use std::time::Instant; 
-
 extern crate clap;	
-
-
 use clap::{Arg, App};
 
+/// Program usage: run with --help flag to see usage
 pub fn main() {
     let matches = App::new("Datamatrix Scanner")
     .version("1.0")
